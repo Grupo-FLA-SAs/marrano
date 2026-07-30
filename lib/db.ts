@@ -15,4 +15,4 @@ function getClient(): SqlFn {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const sql: SqlFn = (...args: any[]) => getClient()(...args)
+export const sql: SqlFn = (...args: any[]) => (getClient() as any)(...args)

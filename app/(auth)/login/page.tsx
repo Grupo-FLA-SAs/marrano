@@ -9,6 +9,7 @@ function LoginForm() {
   const params = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,15 +52,24 @@ function LoginForm() {
 
       <div>
         <label className="label">Contraseña</label>
-        <input
-          type="password"
-          className="input"
-          placeholder="••••••••"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-          autoComplete="current-password"
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            className="input pr-12"
+            placeholder="••••••••"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-felt-400 hover:text-ivory-300 text-sm"
+          >
+            {showPassword ? '🙈' : '👁️'}
+          </button>
+        </div>
       </div>
 
       {error && (

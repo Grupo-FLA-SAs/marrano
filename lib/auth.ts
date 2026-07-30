@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null
 
         const users = await sql`
-          SELECT * FROM organizers WHERE email = ${credentials.email} LIMIT 1
+          SELECT * FROM organizers WHERE LOWER(email) = LOWER(${credentials.email}) LIMIT 1
         `
         const user = users[0]
         if (!user) return null
