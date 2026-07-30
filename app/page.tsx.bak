@@ -1,0 +1,8 @@
+// La ruta raíz / está manejada por app/(admin)/page.tsx
+// Next.js App Router: el grupo (admin) no agrega segmento a la URL
+// Este archivo no debería ser alcanzado; si lo es, redirigir.
+import { redirect } from 'next/navigation'
+
+export default function RootPage() {
+  redirect('/')
+}

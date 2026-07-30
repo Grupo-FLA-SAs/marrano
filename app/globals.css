@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --felt:    #0f4010;
+  --ivory:   #ede8b8;
+  --gold:    #d4a843;
+  --chalk:   #6b93c0;
+  --carbon:  #1a1a1a;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html {
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-felt-800 text-ivory-300;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3 { @apply font-display; }
+}
+
+@layer components {
+  /* --- Tarjeta base --- */
+  .card {
+    @apply bg-felt-700 border border-felt-600 rounded-xl p-4 shadow-lg;
+  }
+
+  .card-dark {
+    @apply bg-carbon-900 border border-felt-700 rounded-xl p-4 shadow-xl;
+  }
+
+  /* --- Botones --- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           rounded-lg font-semibold text-sm transition-all duration-150
+           active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-gold-400 text-carbon-900 hover:bg-gold-300 shadow-md;
+  }
+
+  .btn-secondary {
+    @apply btn bg-felt-600 text-ivory-200 hover:bg-felt-500 border border-felt-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-700 text-white hover:bg-red-600;
+  }
+
+  .btn-ghost {
+    @apply btn text-ivory-300 hover:bg-felt-700;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* --- Inputs --- */
+  .input {
+    @apply w-full bg-felt-800 border border-felt-600 text-ivory-200
+           rounded-lg px-3 py-2.5 text-sm placeholder-felt-400
+           focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-gold-400
+           transition-colors;
+  }
+
+  .label {
+    @apply block text-xs font-semibold text-ivory-400 uppercase tracking-wide mb-1;
+  }
+
+  /* --- Badges --- */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-gold   { @apply badge bg-gold-400 text-carbon-900; }
+  .badge-green  { @apply badge bg-felt-500 text-ivory-200; }
+  .badge-blue   { @apply badge bg-chalk-500 text-white; }
+  .badge-red    { @apply badge bg-red-700 text-white; }
+  .badge-gray   { @apply badge bg-felt-600 text-ivory-300; }
+
+  /* --- Tabla de posiciones --- */
+  .standings-table {
+    @apply w-full text-sm;
+  }
+  .standings-table th {
+    @apply text-left text-xs font-semibold text-ivory-400 uppercase tracking-wide
+           px-2 py-2 border-b border-felt-600;
+  }
+  .standings-table td {
+    @apply px-2 py-2.5 border-b border-felt-700 text-ivory-200;
+  }
+  .standings-table tr:last-child td { @apply border-0; }
+  .standings-table tr:hover td { @apply bg-felt-700/40; }
+
+  /* --- Paño / felt texture sutil --- */
+  .felt-bg {
+    background-color: #0f4010;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.04) 3px,
+      rgba(0,0,0,0.04) 6px
+    );
+  }
+}
+
+/* Scrollbar temática */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a2e0a; }
+::-webkit-scrollbar-thumb { background: #2d7d2d; border-radius: 3px; }
+
+/* Animaciones suaves */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.2s ease-out; }
