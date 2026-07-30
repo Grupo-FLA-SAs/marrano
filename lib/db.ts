@@ -1,15 +1,21 @@
 import { neon } from '@neondatabase/serverless'
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL no está definida en .env.local')
+// Lazy: no lanza en build time, solo cuando se hace una query real
+export function getSql() {
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error('DATABASE_URL no está definida')
+  return neon(url)
 }
 
-export const sql = neon(process.env.DATABASE_URL)
-
-// Helper para queries con parámetros
-export async function query<T = any>(
-  strings: TemplateStringsArray,
-  ...values: any[]
-): Promise<T[]> {
-  return sql(strings, ...values) as Promise<T[]>
-}
+// sql como tagged template — se inicializa la primera vez que se usa
+export const sql: ReturnType<typeof neon> = new Proxy(
+  function () {} as any,
+  {
+    apply(_t, _this, args) {
+      return (getSql() as any)(...args)
+    },
+    get(_t, prop) {
+      return (getSql() as any)[prop]
+    },
+  }
+)
