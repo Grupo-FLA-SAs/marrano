@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const [email, setEmail] = useState('')
@@ -53,7 +53,7 @@ export default function LoginPage() {
           </h1>
           <p className="text-felt-300 text-sm mt-1">Torneo de Billar a Tres Bandas</p>
           <p className="text-ivory-400 text-xs mt-1 italic">
-            "El torneo donde todos juegan y nadie quiere quedar de último."
+            &quot;El torneo donde todos juegan y nadie quiere quedar de último.&quot;
           </p>
         </div>
 
@@ -110,5 +110,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen felt-bg flex items-center justify-center p-4">
+          <p className="text-felt-300 text-sm">Cargando…</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
