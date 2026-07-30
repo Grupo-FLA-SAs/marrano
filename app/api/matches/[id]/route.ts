@@ -21,7 +21,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   const body = await req.json()
   const { sets, matchUpdate, isCorrection } = body
 
-  const existing = await getMatchById(params.id)
+  const existing = await getMatchById(params.id) as any
   if (!existing) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
   // Si es corrección, revertir estadísticas anteriores
