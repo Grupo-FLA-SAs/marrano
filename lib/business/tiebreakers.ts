@@ -136,8 +136,8 @@ function resolvePair(
     const posA = manualOverrides.get(a.player_id)!
     const posB = manualOverrides.get(b.player_id)!
     return [
-      { ...a, position: posA, tiebreak_reason: 'penaltis', needs_manual_resolution: false },
-      { ...b, position: posB, tiebreak_reason: 'penaltis', needs_manual_resolution: false },
+      { ...a, position: posA, tiebreak_reason: 'penaltis' as const, needs_manual_resolution: false },
+      { ...b, position: posB, tiebreak_reason: 'penaltis' as const, needs_manual_resolution: false },
     ].sort((x, y) => x.position - y.position)
   }
 
