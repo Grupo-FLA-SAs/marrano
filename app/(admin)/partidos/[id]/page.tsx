@@ -146,8 +146,12 @@ export default function PartidoPage() {
       setSaving(false)
       return
     }
-    router.back()
-    router.refresh()
+    // Navegar directo a la fase para evitar caché del router
+    if (match.phase_id) {
+      router.push(`/fases/${match.phase_id}`)
+    } else {
+      router.push('/')
+    }
   }
 
   if (!match) return <div className="text-felt-400">Cargando partido…</div>
