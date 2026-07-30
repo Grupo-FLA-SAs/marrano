@@ -125,32 +125,34 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
                 const isWinnerA = m.winner_id === m.player_a_id
 
                 return (
-                  <div key={m.id} className="bg-felt-800/60 rounded-lg px-3 py-2 flex items-center gap-3 text-xs min-w-0">
-                    {/* Nombres + marcador (izquierda, compacto) */}
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <span className={cn('font-bold truncate', isWinnerA ? 'text-gold-400 text-sm' : 'text-ivory-500')}>
+                  <div key={m.id} className="bg-felt-800/60 rounded-lg px-3 py-2 space-y-1.5">
+                    {/* Fila 1: nombres + marcador + editar */}
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={cn('font-bold truncate flex-1 text-xs', isWinnerA ? 'text-gold-400' : 'text-ivory-500')}>
                         {isWinnerA && '👑 '}{pA?.short_name ?? pA?.full_name}
                       </span>
-                      <span className="text-ivory-300 font-bold shrink-0 text-sm">{m.score_a}–{m.score_b}</span>
-                      <span className={cn('font-bold truncate', !isWinnerA ? 'text-gold-400 text-sm' : 'text-ivory-500')}>
+                      <span className="text-ivory-200 font-bold text-sm shrink-0">{m.score_a}–{m.score_b}</span>
+                      <span className={cn('font-bold truncate flex-1 text-right text-xs', !isWinnerA ? 'text-gold-400' : 'text-ivory-500')}>
                         {pB?.short_name ?? pB?.full_name}{!isWinnerA && ' 👑'}
                       </span>
+                      <Link href={`/partidos/${m.id}`} className="shrink-0 text-felt-500 hover:text-gold-400 transition-colors ml-1" title="Editar">✏️</Link>
                     </div>
-                    {/* Sets (derecha) */}
-                    <div className="flex gap-1.5 shrink-0">
-                      {sets.map((s: any, idx: number) => {
-                        const setWinnerA = s.winner_id === m.player_a_id
-                        return (
-                          <span key={idx} className="bg-felt-700 rounded-md px-2 py-1 font-mono text-xs leading-none">
-                            <span className={setWinnerA ? 'text-gold-400 font-bold' : 'text-ivory-500'}>{s.player_a_carambolas}</span>
-                            <span className="text-felt-500 mx-0.5">-</span>
-                            <span className={!setWinnerA ? 'text-gold-400 font-bold' : 'text-ivory-500'}>{s.player_b_carambolas}</span>
-                            {s.had_penalty && <span className="text-amber-400 ml-0.5">⚡</span>}
-                          </span>
-                        )
-                      })}
-                    </div>
-                    <Link href={`/partidos/${m.id}`} className="shrink-0 text-felt-500 hover:text-gold-400 transition-colors" title="Editar">✏️</Link>
+                    {/* Fila 2: sets */}
+                    {sets.length > 0 && (
+                      <div className="flex gap-1.5">
+                        {sets.map((s: any, idx: number) => {
+                          const setWinnerA = s.winner_id === m.player_a_id
+                          return (
+                            <span key={idx} className="bg-felt-700 rounded-md px-2 py-1 font-mono text-xs flex-1 text-center">
+                              <span className={setWinnerA ? 'text-gold-400 font-bold' : 'text-ivory-500'}>{s.player_a_carambolas}</span>
+                              <span className="text-felt-500 mx-0.5">-</span>
+                              <span className={!setWinnerA ? 'text-gold-400 font-bold' : 'text-ivory-500'}>{s.player_b_carambolas}</span>
+                              {s.had_penalty && <span className="text-amber-400 ml-0.5">⚡</span>}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}
