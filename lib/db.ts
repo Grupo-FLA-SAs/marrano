@@ -1,17 +1,18 @@
 import { neon } from '@neondatabase/serverless'
 
-let _client: ((...args: any[]) => Promise<any[]>) | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SqlFn = (strings: any, ...values: any[]) => Promise<any[]>
 
-function getClient() {
+let _client: SqlFn | null = null
+
+function getClient(): SqlFn {
   if (!_client) {
     const url = process.env.DATABASE_URL
     if (!url) throw new Error('DATABASE_URL no está definida')
-    _client = neon(url) as any
+    _client = neon(url) as unknown as SqlFn
   }
   return _client
 }
 
-export const sql = ((...args: any[]) => getClient()(...args)) as unknown as (
-  strings: TemplateStringsArray | string[],
-  ...values: any[]
-) => Promise<any[]>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const sql: SqlFn = (...args: any[]) => getClient()(...args)
