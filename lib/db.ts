@@ -1,21 +1,8 @@
 import { neon } from '@neondatabase/serverless'
 
-// Lazy: no lanza en build time, solo cuando se hace una query real
-export function getSql() {
-  const url = process.env.DATABASE_URL
-  if (!url) throw new Error('DATABASE_URL no está definida')
-  return neon(url)
-}
+// En Vercel las env vars están disponibles en build y runtime.
+// El string vacío no lanza hasta que se ejecute una query real.
+const _sql = neon(process.env.DATABASE_URL ?? '')
 
-// sql como tagged template — se inicializa la primera vez que se usa
-export const sql: ReturnType<typeof neon> = new Proxy(
-  function () {} as any,
-  {
-    apply(_t, _this, args) {
-      return (getSql() as any)(...args)
-    },
-    get(_t, prop) {
-      return (getSql() as any)[prop]
-    },
-  }
-)
+// Tipado como any para evitar conflictos con FullQueryResults
+export const sql: (...args: any[]) => Promise<any[]> = _sql as any
