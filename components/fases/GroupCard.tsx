@@ -15,25 +15,26 @@ interface Props {
 }
 
 export default function GroupCard({ group, members, matches, qualifiersPerGroup }: Props) {
-  const [showAll, setShowAll] = useState(false)
+  const [showAllPending, setShowAllPending] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(false)
   const players = members.map(m => m.player)
 
   const rawStandings = calcGroupStandings(players, matches as any)
   const standings = applyTiebreakers(rawStandings, matches as any)
 
   const totalMatches = players.length * (players.length - 1) / 2
-  const completedMatches = matches.filter(m => m.status === 'terminado').length
+  const completedMatches = matches.filter(m => m.status === 'terminado')
   const pendingMatches = matches.filter(m =>
     m.status === 'pendiente' || m.status === 'programado' || m.status === 'en_juego'
   )
 
   return (
     <div className="card space-y-4">
-      {/* Encabezado del grupo */}
+      {/* Encabezado */}
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-gold-400 text-lg">{group.name}</h3>
         <span className="text-xs text-felt-400">
-          {completedMatches}/{totalMatches} partidos
+          {completedMatches.length}/{totalMatches} partidos
         </span>
       </div>
 
@@ -54,7 +55,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
             </tr>
           </thead>
           <tbody>
-            {standings.map((s, idx) => {
+            {standings.map((s) => {
               const isQualified = s.position <= qualifiersPerGroup
               const isLast = s.position === standings.length
               return (
@@ -72,10 +73,10 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
                       <span className="text-ivory-200 text-sm">
                         {s.player.short_name ?? s.player.full_name}
                       </span>
-                      {isLast && completedMatches === totalMatches && (
+                      {isLast && completedMatches.length === totalMatches && (
                         <span className="badge-red text-xs">🐷</span>
                       )}
-                      {isQualified && completedMatches === totalMatches && (
+                      {isQualified && completedMatches.length === totalMatches && (
                         <span className="badge-green text-xs">✓</span>
                       )}
                     </div>
@@ -104,6 +105,86 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
         </table>
       </div>
 
+      {/* Partidos jugados */}
+      {completedMatches.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowCompleted(v => !v)}
+            className="flex items-center gap-2 text-xs font-semibold text-ivory-400 uppercase tracking-wide mb-2 hover:text-ivory-200 transition-colors"
+          >
+            <span>✅ Partidos jugados ({completedMatches.length})</span>
+            <span>{showCompleted ? '▲' : '▼'}</span>
+          </button>
+
+          {showCompleted && (
+            <div className="space-y-2">
+              {completedMatches.map(m => {
+                const pA = m.player_a as any
+                const pB = m.player_b as any
+                const sets = (m.sets ?? []) as any[]
+                const isWinnerA = m.winner_id === m.player_a_id
+
+                return (
+                  <div key={m.id} className="bg-felt-800/60 rounded-xl px-3 py-2.5 space-y-2">
+                    {/* Cabecera del partido */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className={cn('text-sm font-bold truncate', isWinnerA ? 'text-gold-400' : 'text-ivory-400')}>
+                          {pA?.short_name ?? pA?.full_name}
+                        </span>
+                        <span className="text-felt-400 text-xs shrink-0">H:{pA?.handicap}</span>
+                      </div>
+                      <div className="text-center shrink-0 px-2">
+                        <span className="text-gold-400 font-bold text-base">{m.score_a} – {m.score_b}</span>
+                      </div>
+                      <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                        <span className="text-felt-400 text-xs shrink-0">H:{pB?.handicap}</span>
+                        <span className={cn('text-sm font-bold truncate', !isWinnerA ? 'text-gold-400' : 'text-ivory-400')}>
+                          {pB?.short_name ?? pB?.full_name}
+                        </span>
+                      </div>
+                      <Link
+                        href={`/partidos/${m.id}`}
+                        className="shrink-0 ml-2 text-xs text-felt-400 hover:text-gold-400 transition-colors"
+                        title="Editar resultado"
+                      >
+                        ✏️
+                      </Link>
+                    </div>
+
+                    {/* Sets */}
+                    {sets.length > 0 && (
+                      <div className="flex gap-1.5">
+                        {sets.map((s: any, idx: number) => {
+                          const setWinnerA = s.winner_id === m.player_a_id
+                          return (
+                            <div key={idx} className="flex-1 bg-felt-700/50 rounded-lg px-2 py-1 text-center">
+                              <p className="text-xs text-felt-400 mb-0.5">S{idx + 1}</p>
+                              <p className="text-xs font-mono">
+                                <span className={setWinnerA ? 'text-gold-400 font-bold' : 'text-ivory-400'}>
+                                  {s.player_a_carambolas}
+                                </span>
+                                <span className="text-felt-500 mx-0.5">–</span>
+                                <span className={!setWinnerA ? 'text-gold-400 font-bold' : 'text-ivory-400'}>
+                                  {s.player_b_carambolas}
+                                </span>
+                              </p>
+                              {s.had_penalty && (
+                                <p className="text-xs text-amber-400">⚡</p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Partidos pendientes */}
       {pendingMatches.length > 0 && (
         <div>
@@ -111,7 +192,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
             Partidos pendientes
           </p>
           <div className="space-y-1">
-            {(showAll ? pendingMatches : pendingMatches.slice(0, 4)).map(m => (
+            {(showAllPending ? pendingMatches : pendingMatches.slice(0, 4)).map(m => (
               <Link
                 key={m.id}
                 href={`/partidos/${m.id}`}
@@ -128,10 +209,10 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
             ))}
             {pendingMatches.length > 4 && (
               <button
-                onClick={() => setShowAll(v => !v)}
+                onClick={() => setShowAllPending(v => !v)}
                 className="w-full text-xs text-chalk-400 hover:text-chalk-300 text-center py-1 transition-colors"
               >
-                {showAll ? '▲ Ver menos' : `+${pendingMatches.length - 4} más`}
+                {showAllPending ? '▲ Ver menos' : `+${pendingMatches.length - 4} más`}
               </button>
             )}
           </div>
