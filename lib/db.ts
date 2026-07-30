@@ -1,8 +1,17 @@
 import { neon } from '@neondatabase/serverless'
 
-// En Vercel las env vars están disponibles en build y runtime.
-// El string vacío no lanza hasta que se ejecute una query real.
-const _sql = neon(process.env.DATABASE_URL ?? '')
+let _client: ((...args: any[]) => Promise<any[]>) | null = null
 
-// Tipado como any para evitar conflictos con FullQueryResults
-export const sql: (...args: any[]) => Promise<any[]> = _sql as any
+function getClient() {
+  if (!_client) {
+    const url = process.env.DATABASE_URL
+    if (!url) throw new Error('DATABASE_URL no está definida')
+    _client = neon(url) as any
+  }
+  return _client
+}
+
+export const sql = ((...args: any[]) => getClient()(...args)) as unknown as (
+  strings: TemplateStringsArray | string[],
+  ...values: any[]
+) => Promise<any[]>
