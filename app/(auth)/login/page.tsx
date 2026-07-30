@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const [email, setEmail] = useState('')
@@ -35,6 +35,52 @@ export default function LoginPage() {
   }
 
   return (
+    <form onSubmit={handleLogin} className="space-y-4">
+      <div>
+        <label className="label">Correo electrónico</label>
+        <input
+          type="email"
+          className="input"
+          placeholder="organizador@ejemplo.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+      </div>
+
+      <div>
+        <label className="label">Contraseña</label>
+        <input
+          type="password"
+          className="input"
+          placeholder="••••••••"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+        />
+      </div>
+
+      {error && (
+        <div className="bg-red-900/40 border border-red-700 rounded-lg p-3 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary btn-lg w-full mt-2"
+      >
+        {loading ? 'Ingresando…' : 'Entrar al Corral'}
+      </button>
+    </form>
+  )
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen felt-bg flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
         <div className="absolute top-10 left-10 text-felt-600 text-8xl opacity-20">⚈</div>
@@ -61,48 +107,9 @@ export default function LoginPage() {
           <h2 className="text-ivory-200 font-semibold text-center mb-6">
             Acceso de Organizador
           </h2>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="label">Correo electrónico</label>
-              <input
-                type="email"
-                className="input"
-                placeholder="organizador@ejemplo.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
-
-            <div>
-              <label className="label">Contraseña</label>
-              <input
-                type="password"
-                className="input"
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-900/40 border border-red-700 rounded-lg p-3 text-red-300 text-sm">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary btn-lg w-full mt-2"
-            >
-              {loading ? 'Ingresando…' : 'Entrar al Corral'}
-            </button>
-          </form>
+          <Suspense fallback={null}>
+            <LoginForm />
+          </Suspense>
         </div>
 
         <p className="text-felt-400 text-xs text-center mt-6">

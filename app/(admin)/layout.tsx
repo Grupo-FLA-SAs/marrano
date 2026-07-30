@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="font-display font-bold text-gold-400 text-xl tracking-tight">
             MARRANO
           </span>
-          <span className="text-felt-400 text-xs ml-2">Torneo de Billar a Tres Bandas</span>
+          <span className="text-felt-500 text-xs ml-1">V1.0</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-felt-400 text-xs">{session.user?.email}</span>
@@ -50,6 +50,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 md:p-6 pb-24 md:pb-6">
             {children}
+          </div>
+          <div className="hidden md:block text-center text-felt-600 text-xs pb-4">
+            Diseñado por TamApp
           </div>
         </main>
       </div>
