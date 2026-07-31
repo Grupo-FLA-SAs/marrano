@@ -16,7 +16,8 @@ interface Props {
 
 export default function GroupCard({ group, members, matches, qualifiersPerGroup }: Props) {
   const [showAllPending, setShowAllPending] = useState(false)
-  const [showCompleted, setShowCompleted] = useState(false)
+  // Abierto por defecto para que el marcador recién guardado se vea al instante
+  const [showCompleted, setShowCompleted] = useState(true)
   const players = members.map(m => m.player)
 
   const rawStandings = calcGroupStandings(players, matches as any)

@@ -1,12 +1,15 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { unstable_noStore as noStore } from 'next/cache'
 import GroupCard from '@/components/fases/GroupCard'
 import { getPhaseById } from '@/lib/db/queries'
 import { sql } from '@/lib/db'
 
 export default async function FaseDetailPage({ params }: { params: { id: string } }) {
+  noStore()
   const phase = await getPhaseById(params.id)
   if (!phase) return notFound()
 

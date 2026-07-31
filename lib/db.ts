@@ -1,18 +1,32 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SqlFn = (strings: any, ...values: any[]) => Promise<any[]>
+export type Sql = NeonQueryFunction<false, false>
 
-let _client: SqlFn | null = null
+let _client: Sql | null = null
 
-function getClient(): SqlFn {
+/** Neon HTTP client (lazy). Supports sql`...` and sql.transaction([...]). */
+export function getSql(): Sql {
   if (!_client) {
     const url = process.env.DATABASE_URL
     if (!url) throw new Error('DATABASE_URL no está definida')
-    _client = neon(url) as unknown as SqlFn
+    _client = neon(url)
   }
   return _client
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const sql: SqlFn = (...args: any[]) => (getClient() as any)(...args)
+/**
+ * Tagged-template proxy that also forwards `.transaction`.
+ * Avoids spreading loose `any[]` into a non-rest call signature.
+ */
+export const sql: Sql = new Proxy(function sqlTag() {} as unknown as Sql, {
+  apply(_target, _thisArg, args) {
+    const client = getSql() as unknown as (...a: unknown[]) => unknown
+    return client(...args)
+  },
+  get(_target, prop, receiver) {
+    if (prop === 'then') return undefined // not a Promise
+    const client = getSql() as unknown as Record<PropertyKey, unknown>
+    const value = Reflect.get(client, prop, receiver)
+    return typeof value === 'function' ? (value as Function).bind(client) : value
+  },
+})

@@ -117,40 +117,55 @@ export default function PartidoPage() {
       return
     }
 
-    setSaving(true)
-    setError(null)
-    const res = await fetch(`/api/matches/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sets: sets.map((s, i) => ({
-          set_number: i + 1,
-          player_a_carambolas: s.player_a_carambolas,
-          player_b_carambolas: s.player_b_carambolas,
-          player_a_entries: s.player_a_entries,
-          player_b_entries: s.player_b_entries,
-          player_a_handicap: match.player_a.handicap,
-          player_b_handicap: match.player_b.handicap,
-          winner_id: s.had_penalty ? (s.penalty_winner_id ?? s.winner_id) : s.winner_id,
-          had_penalty: s.had_penalty,
-          penalty_winner_id: s.penalty_winner_id ?? null,
-        })),
-        matchUpdate: { status: 'terminado', winner_id: winnerId, score_a: scoreA, score_b: scoreB },
-        isCorrection,
-      }),
-    })
-
-    if (!res.ok) {
-      const json = await res.json()
-      setError(json.error ?? 'Error al guardar')
-      setSaving(false)
+    if (!winnerId) {
+      setError('El partido aún no tiene ganador. Confirma todos los sets.')
       return
     }
-    // Navegar directo a la fase para evitar caché del router
-    if (match.phase_id) {
-      router.push(`/fases/${match.phase_id}`)
-    } else {
-      router.push('/')
+
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/matches/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sets: sets.map((s, i) => ({
+            set_number: i + 1,
+            player_a_carambolas: s.player_a_carambolas,
+            player_b_carambolas: s.player_b_carambolas,
+            player_a_entries: s.player_a_entries,
+            player_b_entries: s.player_b_entries,
+            player_a_handicap: match.player_a.handicap,
+            player_b_handicap: match.player_b.handicap,
+            winner_id: s.had_penalty ? (s.penalty_winner_id ?? s.winner_id) : s.winner_id,
+            had_penalty: s.had_penalty,
+            penalty_winner_id: s.penalty_winner_id ?? null,
+          })),
+          matchUpdate: { status: 'terminado', winner_id: winnerId, score_a: scoreA, score_b: scoreB },
+          isCorrection,
+        }),
+      })
+
+      let json: any = null
+      try { json = await res.json() } catch { /* ignore */ }
+
+      if (!res.ok) {
+        setError(json?.error ?? `Error al guardar (${res.status})`)
+        setSaving(false)
+        return
+      }
+
+      // Forzar lectura fresca de la fase (evita router cache)
+      const phaseId = match.phase_id
+      if (phaseId) {
+        router.push(`/fases/${phaseId}?saved=${id}&t=${Date.now()}`)
+      } else {
+        router.push(`/?saved=${id}&t=${Date.now()}`)
+      }
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo conectar al servidor')
+      setSaving(false)
     }
   }
 

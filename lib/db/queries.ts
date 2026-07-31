@@ -2,7 +2,7 @@
  * Todas las queries SQL del proyecto.
  * Usado por server components y API routes.
  */
-import { sql } from '@/lib/db'
+import { sql, getSql } from '@/lib/db'
 
 // ─── TORNEOS ────────────────────────────────────────────────────────────────
 
@@ -286,6 +286,72 @@ export async function insertMatchSet(data: Record<string, any>) {
   return rows[0]
 }
 
+export interface MatchSetInput {
+  set_number: number
+  player_a_carambolas: number
+  player_b_carambolas: number
+  player_a_entries: number
+  player_b_entries: number
+  player_a_handicap: number
+  player_b_handicap: number
+  winner_id: string
+  had_penalty: boolean
+  penalty_winner_id: string | null
+}
+
+/**
+ * Guarda sets + resultado del partido en UNA transacción Neon.
+ * Si algo falla, no queda el partido a medias.
+ */
+export async function saveMatchResult(
+  matchId: string,
+  tournamentId: string,
+  sets: MatchSetInput[],
+  matchUpdate: { status: string; winner_id: string | null; score_a: number; score_b: number }
+) {
+  const client = getSql()
+
+  for (const set of sets) {
+    if (!set.winner_id) throw new Error(`Set ${set.set_number}: falta winner_id`)
+    if (!(set.player_a_handicap > 0) || !(set.player_b_handicap > 0)) {
+      throw new Error(`Set ${set.set_number}: hándicap inválido`)
+    }
+    if (set.player_a_entries < 1 || set.player_b_entries < 1) {
+      throw new Error(`Set ${set.set_number}: entradas inválidas`)
+    }
+  }
+
+  await client.transaction([
+    client`DELETE FROM match_sets WHERE match_id = ${matchId}`,
+    ...sets.map(set => client`
+      INSERT INTO match_sets (
+        match_id, tournament_id, set_number,
+        player_a_carambolas, player_b_carambolas,
+        player_a_entries, player_b_entries,
+        player_a_handicap, player_b_handicap,
+        winner_id, had_penalty, penalty_winner_id
+      ) VALUES (
+        ${matchId}, ${tournamentId},
+        ${set.set_number},
+        ${set.player_a_carambolas ?? 0}, ${set.player_b_carambolas ?? 0},
+        ${set.player_a_entries ?? 1}, ${set.player_b_entries ?? 1},
+        ${set.player_a_handicap}, ${set.player_b_handicap},
+        ${set.winner_id}, ${set.had_penalty ?? false},
+        ${set.penalty_winner_id ?? null}
+      )
+    `),
+    client`
+      UPDATE matches SET
+        status = ${matchUpdate.status},
+        winner_id = ${matchUpdate.winner_id ?? null},
+        score_a = ${matchUpdate.score_a ?? 0},
+        score_b = ${matchUpdate.score_b ?? 0},
+        updated_at = NOW()
+      WHERE id = ${matchId}
+    `,
+  ])
+}
+
 // ─── ESTADÍSTICAS HISTÓRICAS ─────────────────────────────────────────────────
 
 export async function getHistoricalStats(tournamentId: string) {
@@ -294,12 +360,139 @@ export async function getHistoricalStats(tournamentId: string) {
   `
 }
 
+async function ensureHistoricalRows(tournamentId: string, playerAId: string, playerBId: string) {
+  await sql`
+    INSERT INTO historical_stats (tournament_id, player_id)
+    VALUES
+      (${tournamentId}, ${playerAId}),
+      (${tournamentId}, ${playerBId})
+    ON CONFLICT (tournament_id, player_id) DO NOTHING
+  `
+}
+
+/**
+ * Actualiza historical_stats en TypeScript (no depende de la función PL/pgSQL
+ * que a menudo no existe en Neon si solo se corrió el schema base).
+ */
 export async function updateHistoricalStats(matchId: string) {
-  await sql`SELECT update_historical_stats(${matchId})`
+  const rows = await sql`
+    SELECT * FROM matches WHERE id = ${matchId} AND status = 'terminado' LIMIT 1
+  `
+  const match = rows[0]
+  if (!match) return
+
+  const sets = await sql`
+    SELECT * FROM match_sets WHERE match_id = ${matchId} ORDER BY set_number
+  `
+
+  await ensureHistoricalRows(match.tournament_id, match.player_a_id, match.player_b_id)
+
+  const aWon = match.winner_id === match.player_a_id ? 1 : 0
+  const bWon = match.winner_id === match.player_b_id ? 1 : 0
+
+  await sql`
+    UPDATE historical_stats SET
+      matches_played = matches_played + 1,
+      matches_won    = matches_won + ${aWon},
+      matches_lost   = matches_lost + ${1 - aWon},
+      sets_won       = sets_won + ${match.score_a},
+      sets_lost      = sets_lost + ${match.score_b}
+    WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_a_id}
+  `
+  await sql`
+    UPDATE historical_stats SET
+      matches_played = matches_played + 1,
+      matches_won    = matches_won + ${bWon},
+      matches_lost   = matches_lost + ${1 - bWon},
+      sets_won       = sets_won + ${match.score_b},
+      sets_lost      = sets_lost + ${match.score_a}
+    WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_b_id}
+  `
+
+  for (const set of sets) {
+    const aSetWon = set.winner_id === match.player_a_id ? set.player_a_entries : 0
+    const bSetWon = set.winner_id === match.player_b_id ? set.player_b_entries : 0
+    await sql`
+      UPDATE historical_stats SET
+        sets_played = sets_played + 1,
+        total_carambolas = total_carambolas + ${set.player_a_carambolas},
+        total_handicap_available = total_handicap_available + ${set.player_a_handicap},
+        total_entries = total_entries + ${set.player_a_entries},
+        entries_in_won_sets = entries_in_won_sets + ${aSetWon}
+      WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_a_id}
+    `
+    await sql`
+      UPDATE historical_stats SET
+        sets_played = sets_played + 1,
+        total_carambolas = total_carambolas + ${set.player_b_carambolas},
+        total_handicap_available = total_handicap_available + ${set.player_b_handicap},
+        total_entries = total_entries + ${set.player_b_entries},
+        entries_in_won_sets = entries_in_won_sets + ${bSetWon}
+      WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_b_id}
+    `
+  }
 }
 
 export async function revertHistoricalStats(matchId: string) {
-  await sql`SELECT revert_historical_stats(${matchId})`
+  const rows = await sql`SELECT * FROM matches WHERE id = ${matchId} LIMIT 1`
+  const match = rows[0]
+  if (!match) return
+
+  const sets = await sql`
+    SELECT * FROM match_sets WHERE match_id = ${matchId} ORDER BY set_number
+  `
+
+  const existingA = await sql`
+    SELECT id FROM historical_stats
+    WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_a_id}
+    LIMIT 1
+  `
+  if (existingA.length === 0) return
+
+  const aWon = match.winner_id === match.player_a_id ? 1 : 0
+  const bWon = match.winner_id === match.player_b_id ? 1 : 0
+
+  await sql`
+    UPDATE historical_stats SET
+      matches_played = GREATEST(0, matches_played - 1),
+      matches_won    = GREATEST(0, matches_won - ${aWon}),
+      matches_lost   = GREATEST(0, matches_lost - ${1 - aWon}),
+      sets_won       = GREATEST(0, sets_won - ${match.score_a}),
+      sets_lost      = GREATEST(0, sets_lost - ${match.score_b})
+    WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_a_id}
+  `
+  await sql`
+    UPDATE historical_stats SET
+      matches_played = GREATEST(0, matches_played - 1),
+      matches_won    = GREATEST(0, matches_won - ${bWon}),
+      matches_lost   = GREATEST(0, matches_lost - ${1 - bWon}),
+      sets_won       = GREATEST(0, sets_won - ${match.score_b}),
+      sets_lost      = GREATEST(0, sets_lost - ${match.score_a})
+    WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_b_id}
+  `
+
+  for (const set of sets) {
+    const aSetWon = set.winner_id === match.player_a_id ? set.player_a_entries : 0
+    const bSetWon = set.winner_id === match.player_b_id ? set.player_b_entries : 0
+    await sql`
+      UPDATE historical_stats SET
+        sets_played = GREATEST(0, sets_played - 1),
+        total_carambolas = GREATEST(0, total_carambolas - ${set.player_a_carambolas}),
+        total_handicap_available = GREATEST(0, total_handicap_available - ${set.player_a_handicap}),
+        total_entries = GREATEST(0, total_entries - ${set.player_a_entries}),
+        entries_in_won_sets = GREATEST(0, entries_in_won_sets - ${aSetWon})
+      WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_a_id}
+    `
+    await sql`
+      UPDATE historical_stats SET
+        sets_played = GREATEST(0, sets_played - 1),
+        total_carambolas = GREATEST(0, total_carambolas - ${set.player_b_carambolas}),
+        total_handicap_available = GREATEST(0, total_handicap_available - ${set.player_b_handicap}),
+        total_entries = GREATEST(0, total_entries - ${set.player_b_entries}),
+        entries_in_won_sets = GREATEST(0, entries_in_won_sets - ${bSetWon})
+      WHERE tournament_id = ${match.tournament_id} AND player_id = ${match.player_b_id}
+    `
+  }
 }
 
 // ─── CLASIFICACIONES ─────────────────────────────────────────────────────────
