@@ -1,6 +1,9 @@
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+export const revalidate = 0
 
 import Link from 'next/link'
+import { unstable_noStore as noStore } from 'next/cache'
 import { getActiveTournament, getPhases } from '@/lib/db/queries'
 
 const statusColors: Record<string, string> = {
@@ -11,6 +14,7 @@ const statusLabels: Record<string, string> = {
 }
 
 export default async function FasesPage() {
+  noStore()
   const tournament = await getActiveTournament()
   if (!tournament) {
     return <div className="text-center py-12"><p className="text-felt-400">Primero crea un torneo.</p></div>

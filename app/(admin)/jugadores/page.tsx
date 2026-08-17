@@ -1,9 +1,13 @@
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+export const revalidate = 0
 
 import Link from 'next/link'
+import { unstable_noStore as noStore } from 'next/cache'
 import { getActiveTournament, getPlayers } from '@/lib/db/queries'
 
 export default async function JugadoresPage() {
+  noStore()
   const tournament = await getActiveTournament()
 
   if (!tournament) {

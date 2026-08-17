@@ -1,10 +1,14 @@
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+export const revalidate = 0
 
+import { unstable_noStore as noStore } from 'next/cache'
 import { getActiveTournament, getPlayers, getHistoricalStats, getQualifiedPlayers, getKnockoutSeeds } from '@/lib/db/queries'
 import { rankPlayers, assignSeeds } from '@/lib/business/ranking'
 import MarranometroTable, { type MarranometroRow } from '@/components/marranometro/MarranometroTable'
 
 export default async function MarranometroPage() {
+  noStore()
   const tournament = await getActiveTournament()
   if (!tournament) return <div className="text-felt-400">No hay torneo activo.</div>
 
