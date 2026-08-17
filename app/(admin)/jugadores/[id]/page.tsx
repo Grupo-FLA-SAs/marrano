@@ -160,7 +160,8 @@ export default function EditarJugadorPage() {
                     setDeleting(true)
                     const res = await fetch(`/api/players/${id}`, { method: 'DELETE' })
                     if (res.ok) {
-                      router.push('/jugadores')
+                      router.push(`/jugadores?t=${Date.now()}`)
+                      router.refresh()
                     } else {
                       const json = await res.json()
                       setMsg({ type: 'error', text: json.error ?? 'Error al eliminar' })
