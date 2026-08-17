@@ -32,6 +32,7 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     )
   }
 
+  await sql`DELETE FROM historical_stats WHERE player_id = ${params.id}`
   await sql`DELETE FROM group_members WHERE player_id = ${params.id}`
   await sql`DELETE FROM players WHERE id = ${params.id}`
   return NextResponse.json({ ok: true })
