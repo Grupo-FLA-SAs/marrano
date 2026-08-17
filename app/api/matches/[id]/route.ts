@@ -20,6 +20,33 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json()
+  if (body?.action === 'walkover') {
+    const { winner_id, sets_to_win = 2 } = body
+    if (!winner_id) return NextResponse.json({ error: 'Falta winner_id' }, { status: 400 })
+
+    const existing = await getMatchById(params.id) as any
+    if (!existing) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+    // Si ya estaba terminado, revertir stats antes de sobrescribir
+    if (existing.status === 'terminado') {
+      try { await revertHistoricalStats(params.id) } catch (e) { console.error('revert:', e) }
+    }
+
+    const isA = winner_id === existing.player_a_id
+    await deleteMatchSets(params.id)
+    await updateMatch(params.id, {
+      status: 'terminado',
+      winner_id,
+      score_a: isA ? sets_to_win : 0,
+      score_b: isA ? 0 : sets_to_win,
+    })
+
+    // Stats cuentan (es un resultado real), pero sin sets no hay carambolas/entradas
+    try { await updateHistoricalStats(params.id) } catch (e) { console.error('stats:', e) }
+
+    return NextResponse.json({ ok: true })
+  }
+
   if (body?.action === 'desierta') {
     const existing = await getMatchById(params.id) as any
     if (!existing) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })

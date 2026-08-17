@@ -53,6 +53,9 @@ export default function PartidoPage() {
   const [correctionReason, setCorrectionReason] = useState('')
   const [confirmDesierta, setConfirmDesierta] = useState(false)
   const [savingDesierta, setSavingDesierta] = useState(false)
+  const [confirmW, setConfirmW] = useState(false)
+  const [wWinnerId, setWWinnerId] = useState<string>('')
+  const [savingW, setSavingW] = useState(false)
 
   useEffect(() => {
     fetch(`/api/matches/${id}`)
@@ -100,6 +103,31 @@ export default function PartidoPage() {
 
   function editSet(idx: number) {
     setSets(prev => prev.map((x, i) => i === idx ? { ...x, confirmed: false } : x))
+  }
+
+  async function handleWalkover() {
+    if (!wWinnerId) { setError('Selecciona quién ganó por W.'); return }
+    setSavingW(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/matches/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'walkover', winner_id: wWinnerId, sets_to_win: setsToWin }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setError(json?.error ?? 'Error al registrar W')
+        setSavingW(false)
+        return
+      }
+      const phaseId = match.phase_id
+      router.push(phaseId ? `/fases/${phaseId}?t=${Date.now()}` : `/?t=${Date.now()}`)
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo conectar')
+      setSavingW(false)
+    }
   }
 
   async function handleDesierta() {
@@ -388,6 +416,55 @@ export default function PartidoPage() {
         <button onClick={handleSave} disabled={saving} className="btn-primary btn-lg w-full">
           {saving ? 'Guardando…' : match.status === 'terminado' ? '💾 Corregir resultado' : '✓ Registrar resultado'}
         </button>
+      )}
+
+      {/* Ganar por W */}
+      {match.status !== 'terminado' && match.status !== 'anulado' && (
+        <div className="border-t border-felt-700 pt-4">
+          {!confirmW ? (
+            <button
+              onClick={() => setConfirmW(true)}
+              className="text-amber-400 hover:text-amber-300 text-sm transition-colors"
+            >
+              🏆 Registrar ganada por W
+            </button>
+          ) : (
+            <div className="bg-amber-900/20 border border-amber-700 rounded-xl p-4 space-y-3">
+              <p className="text-amber-300 text-sm font-medium">
+                ¿Quién gana por W? Cuenta en el Marranómetro pero sin carambolas ni entradas.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { player: playerA, pid: match.player_a_id },
+                  { player: playerB, pid: match.player_b_id },
+                ].map(({ player, pid }) => (
+                  <button key={pid} type="button"
+                    onClick={() => setWWinnerId(pid)}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium border transition-colors ${
+                      wWinnerId === pid
+                        ? 'bg-amber-600 border-amber-500 text-white'
+                        : 'bg-felt-800 border-felt-600 text-ivory-300 hover:border-amber-600'
+                    }`}
+                  >
+                    {player.short_name ?? player.full_name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { setConfirmW(false); setWWinnerId('') }} className="btn-secondary flex-1 text-sm">
+                  Cancelar
+                </button>
+                <button
+                  disabled={savingW || !wWinnerId}
+                  onClick={handleWalkover}
+                  className="flex-1 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  {savingW ? 'Guardando…' : 'Confirmar W'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Declarar desierta — solo si no está terminado */}

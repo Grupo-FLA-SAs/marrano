@@ -126,6 +126,8 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
                 const sets = (m.sets ?? []) as any[]
                 const isWinnerA = m.winner_id === m.player_a_id
 
+                const isWalkover = sets.length === 0
+
                 return (
                   <div key={m.id} className="bg-felt-800/60 rounded-lg px-3 py-2 space-y-1.5">
                     {/* Fila 1: nombres + marcador + editar */}
@@ -133,14 +135,19 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
                       <span className={cn('font-bold truncate flex-1 text-xs', isWinnerA ? 'text-gold-400' : 'text-ivory-500')}>
                         {isWinnerA && '👑 '}{pA?.short_name ?? pA?.full_name}
                       </span>
-                      <span className="text-ivory-200 font-bold text-sm shrink-0">{m.score_a}–{m.score_b}</span>
+                      {isWalkover
+                        ? <span className="text-amber-400 font-bold text-xs shrink-0 px-1">W</span>
+                        : <span className="text-ivory-200 font-bold text-sm shrink-0">{m.score_a}–{m.score_b}</span>
+                      }
                       <span className={cn('font-bold truncate flex-1 text-right text-xs', !isWinnerA ? 'text-gold-400' : 'text-ivory-500')}>
                         {pB?.short_name ?? pB?.full_name}{!isWinnerA && ' 👑'}
                       </span>
                       <Link href={`/partidos/${m.id}`} className="shrink-0 text-felt-500 hover:text-gold-400 transition-colors ml-1" title="Editar">✏️</Link>
                     </div>
-                    {/* Fila 2: sets */}
-                    {sets.length > 0 && (
+                    {/* Fila 2: sets o indicador W */}
+                    {isWalkover ? (
+                      <p className="text-xs text-amber-600">🏆 Ganada por W — sin sets jugados</p>
+                    ) : (
                       <div className="flex gap-1.5">
                         {sets.map((s: any, idx: number) => {
                           const setWinnerA = s.winner_id === m.player_a_id
