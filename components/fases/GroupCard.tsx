@@ -25,6 +25,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
 
   const totalMatches = players.length * (players.length - 1) / 2
   const completedMatches = matches.filter(m => m.status === 'terminado')
+  const desertedMatches = matches.filter(m => m.status === 'anulado')
   const pendingMatches = matches.filter(m =>
     m.status === 'pendiente' || m.status === 'programado' || m.status === 'en_juego'
   )
@@ -159,6 +160,27 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Partidos desiertos */}
+      {desertedMatches.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+            🚫 No jugados ({desertedMatches.length})
+          </p>
+          <div className="space-y-1">
+            {desertedMatches.map(m => (
+              <div key={m.id} className="flex items-center justify-between bg-slate-800/30 rounded-lg px-3 py-2">
+                <span className="text-slate-500 text-xs">
+                  {(m.player_a as any)?.short_name ?? (m.player_a as any)?.full_name}
+                  <span className="mx-1.5">vs</span>
+                  {(m.player_b as any)?.short_name ?? (m.player_b as any)?.full_name}
+                </span>
+                <Link href={`/partidos/${m.id}`} className="text-slate-600 hover:text-slate-400 text-xs transition-colors">✏️</Link>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

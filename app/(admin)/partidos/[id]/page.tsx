@@ -51,6 +51,8 @@ export default function PartidoPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [correctionReason, setCorrectionReason] = useState('')
+  const [confirmDesierta, setConfirmDesierta] = useState(false)
+  const [savingDesierta, setSavingDesierta] = useState(false)
 
   useEffect(() => {
     fetch(`/api/matches/${id}`)
@@ -98,6 +100,34 @@ export default function PartidoPage() {
 
   function editSet(idx: number) {
     setSets(prev => prev.map((x, i) => i === idx ? { ...x, confirmed: false } : x))
+  }
+
+  async function handleDesierta() {
+    setSavingDesierta(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/matches/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'desierta' }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setError(json?.error ?? 'Error al declarar desierta')
+        setSavingDesierta(false)
+        return
+      }
+      const phaseId = match.phase_id
+      if (phaseId) {
+        router.push(`/fases/${phaseId}?t=${Date.now()}`)
+      } else {
+        router.push(`/?t=${Date.now()}`)
+      }
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo conectar')
+      setSavingDesierta(false)
+    }
   }
 
   async function handleSave() {
@@ -358,6 +388,46 @@ export default function PartidoPage() {
         <button onClick={handleSave} disabled={saving} className="btn-primary btn-lg w-full">
           {saving ? 'Guardando…' : match.status === 'terminado' ? '💾 Corregir resultado' : '✓ Registrar resultado'}
         </button>
+      )}
+
+      {/* Declarar desierta — solo si no está terminado */}
+      {match.status !== 'terminado' && match.status !== 'anulado' && (
+        <div className="border-t border-felt-700 pt-4">
+          {!confirmDesierta ? (
+            <button
+              onClick={() => setConfirmDesierta(true)}
+              className="text-slate-400 hover:text-slate-300 text-sm transition-colors"
+            >
+              🚫 Declarar partido desierto / No jugado
+            </button>
+          ) : (
+            <div className="bg-slate-800/60 border border-slate-600 rounded-xl p-4 space-y-3">
+              <p className="text-slate-300 text-sm font-medium">
+                ¿Confirmar que este partido no se jugó? No sumará puntos ni afectará estadísticas.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDesierta(false)} className="btn-secondary flex-1 text-sm">
+                  Cancelar
+                </button>
+                <button
+                  disabled={savingDesierta}
+                  onClick={handleDesierta}
+                  className="flex-1 bg-slate-600 hover:bg-slate-500 text-white rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  {savingDesierta ? 'Procesando…' : 'Sí, desierto'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Indicador si ya está anulado */}
+      {match.status === 'anulado' && (
+        <div className="bg-slate-800/40 border border-slate-600 rounded-xl p-4 text-center">
+          <p className="text-slate-300 text-sm font-semibold">🚫 Este partido fue declarado desierto</p>
+          <p className="text-slate-500 text-xs mt-1">No cuenta en el ranking ni en estadísticas</p>
+        </div>
       )}
     </div>
   )

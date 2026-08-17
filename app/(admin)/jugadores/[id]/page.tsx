@@ -13,6 +13,8 @@ export default function EditarJugadorPage() {
   const [newHandicap, setNewHandicap] = useState<number>(15)
   const [hasPlayedMatches, setHasPlayedMatches] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [msg, setMsg] = useState<{ type: 'ok' | 'error' | 'warn'; text: string } | null>(null)
 
   useEffect(() => {
@@ -132,6 +134,49 @@ export default function EditarJugadorPage() {
           </button>
         </div>
       </form>
+
+      {/* Eliminar jugador */}
+      {!hasPlayedMatches && (
+        <div className="border-t border-felt-700 pt-4">
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-red-400 hover:text-red-300 text-sm transition-colors"
+            >
+              🗑️ Eliminar jugador
+            </button>
+          ) : (
+            <div className="bg-red-900/20 border border-red-700 rounded-xl p-4 space-y-3">
+              <p className="text-red-300 text-sm font-medium">
+                ¿Seguro que querés eliminar a <strong>{player.full_name}</strong>? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirmDelete(false)} className="btn-secondary flex-1 text-sm">
+                  Cancelar
+                </button>
+                <button
+                  disabled={deleting}
+                  onClick={async () => {
+                    setDeleting(true)
+                    const res = await fetch(`/api/players/${id}`, { method: 'DELETE' })
+                    if (res.ok) {
+                      router.push('/jugadores')
+                    } else {
+                      const json = await res.json()
+                      setMsg({ type: 'error', text: json.error ?? 'Error al eliminar' })
+                      setConfirmDelete(false)
+                      setDeleting(false)
+                    }
+                  }}
+                  className="flex-1 bg-red-700 hover:bg-red-600 text-white rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  {deleting ? 'Eliminando…' : 'Sí, eliminar'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

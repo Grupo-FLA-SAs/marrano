@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import {
   getMatchById, getMatchSets, saveMatchResult,
   updateHistoricalStats, revertHistoricalStats,
+  updateMatch, deleteMatchSets,
   type MatchSetInput,
 } from '@/lib/db/queries'
 
@@ -12,6 +13,28 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   if (!match) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
   const sets = await getMatchSets(params.id)
   return NextResponse.json({ data: { match, sets } })
+}
+
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const body = await req.json()
+  if (body?.action === 'desierta') {
+    const existing = await getMatchById(params.id) as any
+    if (!existing) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+    // Si ya estaba terminado, revertir sus stats antes de anular
+    if (existing.status === 'terminado') {
+      try { await revertHistoricalStats(params.id) } catch (e) { console.error('revert stats:', e) }
+    }
+
+    await deleteMatchSets(params.id)
+    await updateMatch(params.id, { status: 'anulado', winner_id: null, score_a: 0, score_b: 0 })
+    return NextResponse.json({ ok: true })
+  }
+
+  return NextResponse.json({ error: 'Acción no reconocida' }, { status: 400 })
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
