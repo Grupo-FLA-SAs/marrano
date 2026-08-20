@@ -26,6 +26,8 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
   const totalMatches = players.length * (players.length - 1) / 2
   const completedMatches = matches.filter(m => m.status === 'terminado')
   const desertedMatches = matches.filter(m => m.status === 'anulado')
+  // Resueltos = terminados + anulados (desiertos/W ya cuentan como cerrados)
+  const resolvedMatches = matches.filter(m => m.status === 'terminado' || m.status === 'anulado')
   const pendingMatches = matches.filter(m =>
     m.status === 'pendiente' || m.status === 'programado' || m.status === 'en_juego'
   )
@@ -36,7 +38,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-gold-400 text-lg">{group.name}</h3>
         <span className="text-xs text-felt-400">
-          {completedMatches.length}/{totalMatches} partidos
+          {resolvedMatches.length}/{totalMatches} partidos
         </span>
       </div>
 
@@ -75,10 +77,10 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
                       <span className="text-ivory-200 text-sm">
                         {s.player.short_name ?? s.player.full_name}
                       </span>
-                      {isLast && completedMatches.length === totalMatches && (
+                      {isLast && resolvedMatches.length === totalMatches && (
                         <span className="badge-red text-xs">🐷</span>
                       )}
-                      {isQualified && completedMatches.length === totalMatches && (
+                      {isQualified && resolvedMatches.length === totalMatches && (
                         <span className="badge-green text-xs">✓</span>
                       )}
                     </div>

@@ -4,42 +4,70 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { drawGroups, groupName } from '@/lib/business/draws'
 
+type DrawMode = 'aleatorio' | 'cabezas' | 'manual'
+
 export default function SorteoPage() {
   const { id: phaseId } = useParams<{ id: string }>()
   const router = useRouter()
   const [phase, setPhase] = useState<any>(null)
   const [players, setPlayers] = useState<any[]>([])
+  const [source, setSource] = useState<'classified' | 'all'>('all')
   const [groups, setGroups] = useState<string[][]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [modo, setModo] = useState<'aleatorio' | 'manual'>('aleatorio')
+  const [modo, setModo] = useState<DrawMode>('aleatorio')
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       const [phaseRes, playersRes] = await Promise.all([
         fetch(`/api/phases/${phaseId}`).then(r => r.json()),
-        fetch('/api/players').then(r => r.json()),
+        fetch(`/api/phases/${phaseId}/eligible-players`).then(r => r.json()),
       ])
       const p = phaseRes.data?.phase
       if (!p) return
       setPhase(p)
-      const allPlayers: any[] = playersRes.data ?? []
-      setPlayers(allPlayers)
-      setGroups(drawGroups(allPlayers.map((pl: any) => pl.id), p.num_groups))
+      const eligible: any[] = playersRes.data ?? []
+      setPlayers(eligible)
+      setSource(playersRes.source ?? 'all')
+      setGroups(drawGroups(eligible.map((pl: any) => pl.id), p.num_groups))
     }
     load()
   }, [phaseId])
 
+  // Sorteo 100% aleatorio
   const resortear = useCallback(() => {
     if (!phase) return
     setGroups(drawGroups(players.map(p => p.id), phase.num_groups))
   }, [players, phase])
 
+  // Modo cabezas: group_position=1 van uno a cada grupo, el resto se sortea
+  const aplicarCabezas = useCallback(() => {
+    if (!phase) return
+    const seeds = players.filter(p => p.group_position === 1)
+    const rest = players.filter(p => p.group_position !== 1)
+
+    // Crear grupos vacíos
+    const newGroups: string[][] = Array.from({ length: phase.num_groups }, () => [])
+
+    // Asignar un cabeza a cada grupo (si hay más cabezas que grupos, el sobrante va aleatorio)
+    const shuffledSeeds = [...seeds].sort(() => Math.random() - 0.5)
+    shuffledSeeds.forEach((s, i) => {
+      if (i < newGroups.length) newGroups[i].push(s.id)
+    })
+
+    // Distribuir el resto aleatoriamente
+    const shuffledRest = [...rest].sort(() => Math.random() - 0.5)
+    shuffledRest.forEach((p, i) => {
+      newGroups[i % newGroups.length].push(p.id)
+    })
+
+    setGroups(newGroups)
+  }, [players, phase])
+
   const vaciarGrupos = useCallback(() => {
     if (!phase) return
     setGroups(Array.from({ length: phase.num_groups }, () => []))
-    setModo('manual')
   }, [phase])
 
   function addToGroup(playerId: string, toGroup: number) {
@@ -75,6 +103,7 @@ export default function SorteoPage() {
 
   const assignedIds = groups.flat()
   const unassigned = players.filter(p => !assignedIds.includes(p.id))
+  const seedCount = players.filter(p => p.group_position === 1).length
 
   async function confirmarSorteo() {
     if (!phase) return
@@ -110,24 +139,61 @@ export default function SorteoPage() {
 
   return (
     <div className="space-y-6 fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-gold-400">🎲 Asignación de grupos</h1>
-          <p className="text-felt-300 text-sm">{phase.name} · {players.length} jugadores</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {modo === 'aleatorio' && (
-            <button onClick={resortear} className="btn-secondary">🔀 Volver a sortear</button>
-          )}
+      <div>
+        <button onClick={() => router.back()} className="text-felt-400 text-xs">← Volver</button>
+        <h1 className="text-2xl font-display font-bold text-gold-400 mt-1">🎲 Asignación de grupos</h1>
+        <p className="text-felt-300 text-sm">
+          {phase.name} · {players.length} jugadores
+          {source === 'classified' && <span className="text-gold-400 ml-2">· Clasificados de la fase anterior</span>}
+        </p>
+      </div>
+
+      {/* Selector de modo */}
+      <div className="card space-y-3">
+        <p className="text-xs font-semibold text-ivory-400 uppercase tracking-wide">Modo de asignación</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
-            onClick={modo === 'manual'
-              ? () => { resortear(); setModo('aleatorio') }
-              : vaciarGrupos}
-            className="btn-secondary"
+            onClick={() => { setModo('aleatorio'); resortear() }}
+            className={`rounded-xl px-4 py-3 text-sm font-medium border transition-colors text-left ${
+              modo === 'aleatorio' ? 'bg-gold-400/20 border-gold-400 text-gold-300' : 'bg-felt-800 border-felt-600 text-ivory-300 hover:border-gold-400/50'
+            }`}
           >
-            {modo === 'manual' ? '🎲 Modo aleatorio' : '✏️ Asignar manualmente'}
+            <div className="text-base mb-0.5">🎲 100% Aleatorio</div>
+            <div className="text-xs opacity-70">Sorteo completamente al azar</div>
+          </button>
+
+          <button
+            onClick={() => { setModo('cabezas'); aplicarCabezas() }}
+            disabled={seedCount === 0}
+            className={`rounded-xl px-4 py-3 text-sm font-medium border transition-colors text-left ${
+              modo === 'cabezas' ? 'bg-gold-400/20 border-gold-400 text-gold-300'
+              : seedCount === 0 ? 'opacity-40 bg-felt-800 border-felt-700 text-felt-400 cursor-not-allowed'
+              : 'bg-felt-800 border-felt-600 text-ivory-300 hover:border-gold-400/50'
+            }`}
+          >
+            <div className="text-base mb-0.5">🏆 Cabezas de grupo</div>
+            <div className="text-xs opacity-70">
+              {seedCount > 0 ? `${seedCount} cabezas separados, resto al azar` : 'No hay datos de fase anterior'}
+            </div>
+          </button>
+
+          <button
+            onClick={() => { setModo('manual'); vaciarGrupos() }}
+            className={`rounded-xl px-4 py-3 text-sm font-medium border transition-colors text-left ${
+              modo === 'manual' ? 'bg-gold-400/20 border-gold-400 text-gold-300' : 'bg-felt-800 border-felt-600 text-ivory-300 hover:border-gold-400/50'
+            }`}
+          >
+            <div className="text-base mb-0.5">✏️ 100% Manual</div>
+            <div className="text-xs opacity-70">Asignas cada jugador a mano</div>
           </button>
         </div>
+
+        {modo === 'aleatorio' && (
+          <button onClick={resortear} className="btn-secondary text-sm">🔀 Volver a sortear</button>
+        )}
+        {modo === 'cabezas' && (
+          <button onClick={aplicarCabezas} className="btn-secondary text-sm">🔀 Reasignar (mantener cabezas)</button>
+        )}
       </div>
 
       {/* Panel sin grupo — solo modo manual */}
@@ -136,14 +202,12 @@ export default function SorteoPage() {
           <p className="text-xs font-semibold text-ivory-400 uppercase tracking-wide">
             Sin grupo ({unassigned.length})
           </p>
-
           {unassigned.length === 0 ? (
             <p className="text-felt-400 text-sm">✓ Todos los jugadores están asignados</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {unassigned.map(p => (
-                <button
-                  key={p.id}
+                <button key={p.id}
                   onClick={() => setSelected(selected === p.id ? null : p.id)}
                   className={`px-2 py-1 rounded text-sm border transition-colors ${
                     selected === p.id
@@ -157,13 +221,11 @@ export default function SorteoPage() {
               ))}
             </div>
           )}
-
           {selected && (
             <div className="flex flex-wrap gap-2 pt-2 border-t border-felt-700">
               <span className="text-xs text-felt-400 self-center">Asignar a:</span>
               {groups.map((_, gi) => (
-                <button
-                  key={gi}
+                <button key={gi}
                   onClick={() => { addToGroup(selected, gi); setSelected(null) }}
                   className="text-xs px-3 py-1.5 bg-felt-600 hover:bg-gold-400 hover:text-carbon-900 rounded font-medium transition-colors"
                 >
@@ -172,13 +234,10 @@ export default function SorteoPage() {
               ))}
             </div>
           )}
-
-          {!selected && unassigned.length > 0 && (
-            <p className="text-xs text-felt-500">Haz clic en un jugador para seleccionarlo, luego elige el grupo</p>
-          )}
         </div>
       )}
 
+      {/* Grupos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {groups.map((groupPlayers, gi) => (
           <div key={gi} className="card">
@@ -190,33 +249,30 @@ export default function SorteoPage() {
               {groupPlayers.map(pid => {
                 const p = getPlayer(pid)
                 if (!p) return null
+                const isSeed = p.group_position === 1
                 return (
                   <div key={pid} className="flex items-center justify-between">
                     <div className="text-sm">
+                      {isSeed && <span className="text-gold-400 mr-1" title="Cabeza de grupo">👑</span>}
                       <span className="text-ivory-200">{p.short_name ?? p.full_name}</span>
                       <span className="text-gold-400 ml-2 text-xs">H:{p.handicap}</span>
                     </div>
                     <div className="flex gap-1 items-center">
-                      {modo === 'aleatorio' && groups.map((_, ti) => ti !== gi && (
+                      {modo !== 'manual' && groups.map((_, ti) => ti !== gi && (
                         <button key={ti} onClick={() => movePlayer(pid, gi, ti)}
                           className="text-felt-400 hover:text-gold-400 text-xs px-1">
                           →{groupName(ti)}
                         </button>
                       ))}
                       {modo === 'manual' && (
-                        <button
-                          onClick={() => removeFromGroup(pid, gi)}
-                          className="text-felt-500 hover:text-red-400 text-xs px-1 ml-2"
-                          title="Quitar del grupo"
-                        >✕</button>
+                        <button onClick={() => removeFromGroup(pid, gi)}
+                          className="text-felt-500 hover:text-red-400 text-xs px-1 ml-2">✕</button>
                       )}
                     </div>
                   </div>
                 )
               })}
-              {groupPlayers.length === 0 && (
-                <p className="text-felt-500 text-xs italic">Vacío</p>
-              )}
+              {groupPlayers.length === 0 && <p className="text-felt-500 text-xs italic">Vacío</p>}
             </div>
           </div>
         ))}

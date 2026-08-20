@@ -36,7 +36,9 @@ export default function CierreFasePage() {
           handicap: m.handicap,
         }))
 
-        const pending = gMatches.filter((m: any) => m.status === 'pendiente')
+        const pending = gMatches.filter((m: any) =>
+          !['terminado', 'anulado'].includes(m.status)
+        )
         if (pending.length > 0) {
           allIssues.push(`${group.name}: quedan ${pending.length} partido(s) sin terminar.`)
         }
