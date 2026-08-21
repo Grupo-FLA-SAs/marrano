@@ -22,6 +22,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
 
   const rawStandings = calcGroupStandings(players, matches as any)
   const standings = applyTiebreakers(rawStandings, matches as any)
+  const hasPendingTies = resolvedMatches.length === totalMatches && standings.some(s => s.needs_manual_resolution)
 
   const totalMatches = players.length * (players.length - 1) / 2
   const completedMatches = matches.filter(m => m.status === 'terminado')
@@ -41,6 +42,13 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
           {resolvedMatches.length}/{totalMatches} partidos
         </span>
       </div>
+
+      {/* Alerta penaltis pendientes */}
+      {hasPendingTies && (
+        <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg px-3 py-2 text-xs text-amber-300 font-medium">
+          ⚡ Empate sin resolver — ve a <strong>Cerrar fase</strong> para definir por penaltis
+        </div>
+      )}
 
       {/* Tabla de posiciones */}
       <div className="overflow-x-auto -mx-1">
