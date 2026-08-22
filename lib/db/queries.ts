@@ -577,7 +577,7 @@ export async function insertKnockoutMatch(data: Record<string, any>) {
 export async function getDashboardStats(tournamentId: string) {
   const [players, matches, phases] = await Promise.all([
     sql`SELECT COUNT(*) as cnt FROM players WHERE tournament_id = ${tournamentId}`,
-    sql`SELECT COUNT(*) as cnt FROM matches WHERE tournament_id = ${tournamentId} AND status = 'terminado'`,
+    sql`SELECT COUNT(*) as cnt FROM matches WHERE tournament_id = ${tournamentId} AND status IN ('terminado', 'anulado')`,
     sql`SELECT * FROM phases WHERE tournament_id = ${tournamentId} AND status = 'activa' LIMIT 1`,
   ])
   return {

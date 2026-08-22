@@ -20,15 +20,14 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
   const [showCompleted, setShowCompleted] = useState(true)
   const players = members.map(m => m.player)
 
-  const rawStandings = calcGroupStandings(players, matches as any)
-  const standings = applyTiebreakers(rawStandings, matches as any)
-  const hasPendingTies = resolvedMatches.length === totalMatches && standings.some(s => s.needs_manual_resolution)
-
   const totalMatches = players.length * (players.length - 1) / 2
   const completedMatches = matches.filter(m => m.status === 'terminado')
   const desertedMatches = matches.filter(m => m.status === 'anulado')
-  // Resueltos = terminados + anulados (desiertos/W ya cuentan como cerrados)
   const resolvedMatches = matches.filter(m => m.status === 'terminado' || m.status === 'anulado')
+
+  const rawStandings = calcGroupStandings(players, matches as any)
+  const standings = applyTiebreakers(rawStandings, matches as any)
+  const hasPendingTies = resolvedMatches.length === totalMatches && standings.some(s => s.needs_manual_resolution)
   const pendingMatches = matches.filter(m =>
     m.status === 'pendiente' || m.status === 'programado' || m.status === 'en_juego'
   )

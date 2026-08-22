@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   // Progreso del torneo
   const progressData = await sql`
     SELECT
-      COUNT(*) FILTER (WHERE status = 'terminado') AS played,
+      COUNT(*) FILTER (WHERE status IN ('terminado', 'anulado')) AS played,
       COUNT(*) AS total
     FROM matches
     WHERE tournament_id = ${tournament.id}
