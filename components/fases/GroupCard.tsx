@@ -44,9 +44,12 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
 
       {/* Alerta penaltis pendientes */}
       {hasPendingTies && (
-        <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg px-3 py-2 text-xs text-amber-300 font-medium">
-          ⚡ Empate sin resolver — ve a <strong>Cerrar fase</strong> para definir por penaltis
-        </div>
+        <Link
+          href={`/fases/${group.phase_id}/cierre`}
+          className="block bg-amber-900/20 border border-amber-700/50 rounded-lg px-3 py-2 text-xs text-amber-300 font-medium hover:bg-amber-900/40 hover:border-amber-600 transition-colors"
+        >
+          ⚡ Empate sin resolver — toca aquí para <strong>definir por penaltis</strong> →
+        </Link>
       )}
 
       {/* Tabla de posiciones */}
