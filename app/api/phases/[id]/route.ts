@@ -85,12 +85,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 
   if (body.action === 'close_phase') {
-    const { qualifications } = body
-    for (const q of qualifications) {
-      await upsertQualification(q)
+    try {
+      const { qualifications } = body
+      for (const q of qualifications) {
+        await upsertQualification(q)
+      }
+      await updatePhaseStatus(params.id, 'finalizada')
+      return NextResponse.json({ ok: true })
+    } catch (e: any) {
+      console.error('close_phase error:', e)
+      return NextResponse.json({ error: e.message ?? 'Error al cerrar fase' }, { status: 500 })
     }
-    await updatePhaseStatus(params.id, 'finalizada')
-    return NextResponse.json({ ok: true })
   }
 
   return NextResponse.json({ error: 'Acción desconocida' }, { status: 400 })

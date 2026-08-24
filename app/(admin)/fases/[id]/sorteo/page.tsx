@@ -298,9 +298,14 @@ export default function SorteoPage() {
         <button
           onClick={confirmarSorteo}
           disabled={saving || (modo === 'manual' && unassigned.length > 0)}
-          className="btn-primary flex-1 btn-lg"
+          className={`btn-primary flex-1 btn-lg relative overflow-hidden transition-all duration-300 ${saving ? 'opacity-90' : ''}`}
         >
-          {saving ? 'Confirmando…' : '✓ Confirmar y crear partidos'}
+          {saving ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="inline-block animate-spin text-base">🎲</span>
+              <span>Sorteando…</span>
+            </span>
+          ) : '✓ Confirmar y crear partidos'}
         </button>
       </div>
     </div>

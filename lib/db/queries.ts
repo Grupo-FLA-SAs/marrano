@@ -516,13 +516,15 @@ export async function getPhaseQualifications(phaseId: string) {
 export async function upsertQualification(data: Record<string, any>) {
   await sql`
     INSERT INTO phase_qualifications
-      (tournament_id, phase_id, player_id, status, group_position, is_marrano)
+      (tournament_id, phase_id, player_id, group_id, status, position_in_group, is_marrano)
     VALUES
-      (${data.tournament_id}, ${data.phase_id}, ${data.player_id},
+      (${data.tournament_id}, ${data.phase_id}, ${data.player_id}, ${data.group_id},
        ${data.status}, ${data.group_position ?? null}, ${data.is_marrano ?? false})
     ON CONFLICT (phase_id, player_id)
-    DO UPDATE SET status = EXCLUDED.status,
-      group_position = EXCLUDED.group_position,
+    DO UPDATE SET
+      status = EXCLUDED.status,
+      group_id = EXCLUDED.group_id,
+      position_in_group = EXCLUDED.position_in_group,
       is_marrano = EXCLUDED.is_marrano,
       updated_at = NOW()
   `
