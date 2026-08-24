@@ -12,9 +12,10 @@ interface Props {
   members: (GroupMember & { player: Player })[]
   matches: (Match & { player_a: Player; player_b: Player; sets: MatchSet[] })[]
   qualifiersPerGroup: number
+  phaseStatus?: string
 }
 
-export default function GroupCard({ group, members, matches, qualifiersPerGroup }: Props) {
+export default function GroupCard({ group, members, matches, qualifiersPerGroup, phaseStatus }: Props) {
   const [showAllPending, setShowAllPending] = useState(false)
   // Abierto por defecto para que el marcador recién guardado se vea al instante
   const [showCompleted, setShowCompleted] = useState(true)
@@ -43,7 +44,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup 
       </div>
 
       {/* Alerta penaltis pendientes */}
-      {hasPendingTies && (
+      {hasPendingTies && phaseStatus !== 'finalizada' && (
         <Link
           href={`/fases/${group.phase_id}/cierre`}
           className="block bg-amber-900/20 border border-amber-700/50 rounded-lg px-3 py-2 text-xs text-amber-300 font-medium hover:bg-amber-900/40 hover:border-amber-600 transition-colors"

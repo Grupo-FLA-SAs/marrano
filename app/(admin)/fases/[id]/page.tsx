@@ -99,6 +99,7 @@ export default async function FaseDetailPage({ params }: { params: { id: string 
             members={groupMembers}
             matches={groupMatches}
             qualifiersPerGroup={phase.qualifiers_per_group}
+            phaseStatus={phase.status}
           />
         )
       })}

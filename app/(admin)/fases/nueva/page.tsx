@@ -14,9 +14,8 @@ export default function NuevaFasePage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Cargar conteo de jugadores disponibles
-    fetch('/api/players').then(r => r.json()).then(({ data }) => {
-      setAvailablePlayers((data ?? []).length)
+    fetch('/api/players/eligible').then(r => r.json()).then(({ count }) => {
+      setAvailablePlayers(count ?? 0)
     })
   }, [])
 
