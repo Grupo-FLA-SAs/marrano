@@ -88,7 +88,7 @@ export default function GroupCard({ group, members, matches, qualifiersPerGroup,
                       <span className="text-ivory-200 text-sm">
                         {s.player.short_name ?? s.player.full_name}
                       </span>
-                      {isLast && resolvedMatches.length === totalMatches && (
+                      {!isQualified && resolvedMatches.length === totalMatches && (
                         <span className="badge-red text-xs">🐷</span>
                       )}
                       {isQualified && resolvedMatches.length === totalMatches && (
