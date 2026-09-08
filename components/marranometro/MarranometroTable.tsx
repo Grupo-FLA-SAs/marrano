@@ -95,35 +95,43 @@ export default function MarranometroTable({ rows }: { rows: MarranometroRow[] })
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r, i) => (
-            <tr key={r.player_id} className={r.is_eliminated ? 'opacity-40' : ''}>
-              <td className="text-center font-bold text-ivory-300">{i + 1}</td>
-              <td>
-                <div className={cn('text-sm font-medium', r.is_eliminated ? 'line-through text-felt-400' : 'text-ivory-200')}>
-                  {r.short_name ?? r.full_name}
-                  {r.is_eliminated && <span className="ml-1 no-underline text-xs">🐷</span>}
-                </div>
-                <div className="text-xs text-felt-400">H: {r.handicap}</div>
-              </td>
-              {COLUMNS.map(col => (
-                <td key={col.key}
-                    className={cn(
-                      'text-center',
-                      r.is_eliminated ? 'text-felt-600' : sortKey === col.key ? 'text-gold-300 font-semibold' : 'text-ivory-300'
-                    )}
-                >
-                  {fmt(col.key, r[col.key] as number)}
-                </td>
-              ))}
-              <td className="text-right">
-                {r.is_eliminated
-                  ? <span className="text-felt-600 text-xs">Eliminado</span>
-                  : r.seed_position !== null
-                    ? <span className="badge-gold">#{r.seed_position}</span>
-                    : '—'}
-              </td>
-            </tr>
-          ))}
+          {(() => {
+            let seedCounter = 0
+            return sorted.map((r, i) => {
+              const hasStoredSeed = !r.is_eliminated && r.seed_position !== null
+              if (hasStoredSeed) seedCounter++
+              const displaySeed = hasStoredSeed ? seedCounter : null
+              return (
+                <tr key={r.player_id} className={r.is_eliminated ? 'opacity-65' : ''}>
+                  <td className="text-center font-bold text-ivory-300">{i + 1}</td>
+                  <td>
+                    <div className={cn('text-sm font-medium', r.is_eliminated ? 'line-through text-felt-300' : 'text-ivory-200')}>
+                      {r.short_name ?? r.full_name}
+                      {r.is_eliminated && <span className="ml-1 not-italic text-xs">🐷</span>}
+                    </div>
+                    <div className="text-xs text-felt-400">H: {r.handicap}</div>
+                  </td>
+                  {COLUMNS.map(col => (
+                    <td key={col.key}
+                        className={cn(
+                          'text-center',
+                          r.is_eliminated ? 'text-felt-500' : sortKey === col.key ? 'text-gold-300 font-semibold' : 'text-ivory-300'
+                        )}
+                    >
+                      {fmt(col.key, r[col.key] as number)}
+                    </td>
+                  ))}
+                  <td className="text-right">
+                    {r.is_eliminated
+                      ? <span className="text-felt-500 text-xs line-through">Elim.</span>
+                      : displaySeed !== null
+                        ? <span className="badge-gold">#{displaySeed}</span>
+                        : '—'}
+                  </td>
+                </tr>
+              )
+            })
+          })()}
         </tbody>
       </table>
     </div>
