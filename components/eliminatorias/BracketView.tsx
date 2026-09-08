@@ -11,7 +11,7 @@ interface Match {
   score_a: number | null
   score_b: number | null
   status: string
-  knockout_round: string
+  knockout_round: string | null
 }
 
 interface Seed {
@@ -26,9 +26,9 @@ interface Player {
 }
 
 interface Props {
-  bracket: Record<string, Match[]>
-  seeds: Seed[]
-  playerMap: Map<string, Player>
+  bracket: Record<string, any[]>
+  seeds: any[]
+  playerMap: Map<string, any>
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
