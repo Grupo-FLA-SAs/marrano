@@ -53,17 +53,21 @@ export default function EliminatoriasPage() {
   const playerMap = new Map(players.map((p: any) => [p.id, p]))
 
   // Detectar qué ronda está completa y cuál es la siguiente pendiente
-  const progression: Array<{ currentRound: string; nextRound: string }> = [
-    { currentRound: 'octavos',   nextRound: 'cuartos'   },
-    { currentRound: 'cuartos',   nextRound: 'semifinal' },
-    { currentRound: 'semifinal', nextRound: 'final'     },
-  ]
-  const pendingNext: { currentRound: string; nextRound: string } | null =
-    progression.find(({ currentRound, nextRound }) => {
-      const curr = bracket[currentRound as keyof typeof bracket] ?? []
-      const nxt  = bracket[nextRound   as keyof typeof bracket] ?? []
-      return curr.length > 0 && isRoundComplete(curr) && nxt.length === 0
-    }) ?? null
+  const octavosM   = bracket.octavos   ?? []
+  const cuartosM   = bracket.cuartos   ?? []
+  const semifinalM = bracket.semifinal ?? []
+  const finalM     = bracket.final     ?? []
+
+  let pendingCurrentRound = ''
+  let pendingNextRound    = ''
+  if (octavosM.length > 0 && isRoundComplete(octavosM) && cuartosM.length === 0) {
+    pendingCurrentRound = 'octavos'; pendingNextRound = 'cuartos'
+  } else if (cuartosM.length > 0 && isRoundComplete(cuartosM) && semifinalM.length === 0) {
+    pendingCurrentRound = 'cuartos'; pendingNextRound = 'semifinal'
+  } else if (semifinalM.length > 0 && isRoundComplete(semifinalM) && finalM.length === 0) {
+    pendingCurrentRound = 'semifinal'; pendingNextRound = 'final'
+  }
+  const hasPendingNext = pendingCurrentRound !== ''
 
   // Campeón
   const finalMatch = bracket['final']?.[0]
@@ -100,17 +104,17 @@ export default function EliminatoriasPage() {
       )}
 
       {/* Acción: avanzar ronda */}
-      {pendingNext && (
+      {hasPendingNext && (
         <div className="card flex items-center justify-between gap-4">
           <p className="text-ivory-200 text-sm">
-            {roundLabel[pendingNext.currentRound]} completados — ¿generar {roundLabel[pendingNext.nextRound]}?
+            {roundLabel[pendingCurrentRound]} completados — ¿generar {roundLabel[pendingNextRound]}?
           </p>
           <button
-            onClick={() => generarSiguienteRonda(pendingNext!.currentRound, pendingNext!.nextRound)}
+            onClick={() => generarSiguienteRonda(pendingCurrentRound, pendingNextRound)}
             disabled={generating}
             className="btn-primary btn-sm shrink-0"
           >
-            {generating ? '…' : `Generar ${roundLabel[pendingNext.nextRound]} →`}
+            {generating ? '…' : `Generar ${roundLabel[pendingNextRound]} →`}
           </button>
         </div>
       )}
