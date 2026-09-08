@@ -35,16 +35,14 @@ export function generateOctavosCruces(
   //   5: 7v10 → cuartos[2]
   //   6: 3v14 → cuartos[3]
   //   7: 6v11 → cuartos[3]
-  // Esquinas: TL=1, TR=2, BR=3, BL=4
-  // Cuartos: winner(1v16)+winner(8v9) → izq arriba
-  //          winner(5v12)+winner(4v13) → izq abajo
-  //          winner(2v15)+winner(7v10) → der arriba
-  //          winner(6v11)+winner(3v14) → der abajo
+  // Esquinas: TL=2, BL=4, TR=1, BR=3
+  // Cuartos: 2v6 (izq top), 4v8 (izq bot), 1v5 (der top), 3v7 (der bot)
+  // Semis:   izq winner vs izq winner → 2o4; der winner → 1o3; Final: 1v2 posible
   const order: [number, number][] = [
-    [1, 16], [8,  9],  // izq top → cuartos[0]
-    [5, 12], [4, 13],  // izq bot → cuartos[1]
-    [2, 15], [7, 10],  // der top → cuartos[2]
-    [6, 11], [3, 14],  // der bot → cuartos[3]
+    [2, 15], [6, 11],  // izq top → cuartos[0]  (2v6)
+    [8,  9], [4, 13],  // izq bot → cuartos[1]  (4v8) — seed4 en esquina BL
+    [1, 16], [5, 12],  // der top → cuartos[2]  (1v5) — seed1 en esquina TR
+    [7, 10], [3, 14],  // der bot → cuartos[3]  (3v7) — seed3 en esquina BR
   ]
 
   return order
