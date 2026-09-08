@@ -89,51 +89,51 @@ export default function EliminatoriasPage() {
       </div>
 
       {/* Acción: generar siembra */}
-      {!hasSiembra && (
+      {!hasSiembra ? (
         <div className="card">
           <h2 className="font-semibold text-ivory-200 mb-2">Siembra y octavos de final</h2>
-          {msg && (
+          {msg ? (
             <div className="bg-red-900/40 border border-red-700 rounded p-2 text-red-300 text-sm mb-3">
               {msg}
             </div>
-          )}
+          ) : null}
           <button onClick={generarSiembraYOctavos} disabled={generating} className="btn-primary">
             {generating ? 'Generando…' : '🎯 Generar siembra y octavos'}
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* Acción: avanzar ronda */}
-      {hasPendingNext && (
+      {hasPendingNext ? (
         <div className="card flex items-center justify-between gap-4">
           <p className="text-ivory-200 text-sm">
-            {roundLabel[pendingCurrentRound]} completados — ¿generar {roundLabel[pendingNextRound]}?
+            {roundLabel[pendingCurrentRound] ?? pendingCurrentRound} completados — ¿generar {roundLabel[pendingNextRound] ?? pendingNextRound}?
           </p>
           <button
             onClick={() => generarSiguienteRonda(pendingCurrentRound, pendingNextRound)}
             disabled={generating}
             className="btn-primary btn-sm shrink-0"
           >
-            {generating ? '…' : `Generar ${roundLabel[pendingNextRound]} →`}
+            {generating ? '…' : `Generar ${roundLabel[pendingNextRound] ?? pendingNextRound} →`}
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* Cuadro visual */}
-      {hasSiembra && (
+      {hasSiembra ? (
         <div className="card p-4">
           <BracketView bracket={bracket} seeds={seeds} playerMap={playerMap} />
         </div>
-      )}
+      ) : null}
 
       {/* Campeón */}
-      {champion && (
+      {champion ? (
         <div className="card text-center bg-gold-400/10 border-gold-400">
           <div className="text-4xl mb-2">🏆</div>
           <h2 className="text-2xl font-display font-bold text-gold-400">Maestro de las Tres Bandas</h2>
           <p className="text-ivory-200 text-xl mt-2 font-bold">{(champion as any)?.full_name ?? '—'}</p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
