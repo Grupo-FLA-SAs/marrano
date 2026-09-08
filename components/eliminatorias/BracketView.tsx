@@ -58,23 +58,25 @@ function MatchCard({
   const pending = !empty && match.status !== 'terminado'
 
   const renderPlayer = (id: string | null, score: number | null) => {
-    const isWinner = match?.winner_id && match.winner_id === id
+    const isWinner = !!(match?.winner_id && match.winner_id === id)
+    const isLoser = !!(match?.winner_id && match.winner_id !== id && id)
     const seed = seedNum(id, seeds)
     return (
       <div className={cn(
         'flex items-center gap-1.5 px-2 py-1 text-xs min-w-0',
-        isWinner ? 'text-gold-400 font-bold' : 'text-ivory-200',
+        isWinner ? 'text-gold-400 font-bold' : isLoser ? 'text-felt-500 line-through' : 'text-ivory-200',
         empty && 'text-felt-600',
       )}>
         {seed != null && (
           <span className={cn(
             'shrink-0 text-[10px] w-5 h-5 flex items-center justify-center rounded font-bold',
-            isWinner ? 'bg-gold-400 text-felt-900' : 'bg-felt-700 text-ivory-300',
+            isWinner ? 'bg-gold-400 text-felt-900' : isLoser ? 'bg-felt-800 text-felt-500' : 'bg-felt-700 text-ivory-300',
           )}>
             {seed}
           </span>
         )}
         <span className="truncate">{empty ? '—' : playerName(id, playerMap)}</span>
+        {isLoser && <span className="ml-0.5 not-italic shrink-0">🐷</span>}
         {score != null && !pending && (
           <span className="ml-auto shrink-0 font-mono font-bold">{score}</span>
         )}
