@@ -50,7 +50,7 @@ export default function EliminatoriasPage() {
   const { seeds, matches, players } = data
   const bracket = organizeBracket(matches)
   const hasSiembra = seeds.length === 16
-  const playerMap = new Map(players.map((p: any) => [p.id, p]))
+  const playerMap = new Map<string, any>(players.map((p: any) => [p.id, p]))
 
   // Detectar qué ronda está completa y cuál es la siguiente pendiente
   const octavosM   = bracket.octavos   ?? []
