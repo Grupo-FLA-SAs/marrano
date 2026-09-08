@@ -30,11 +30,11 @@ function bySeeds(oct: any[], seeds: any[], sA: number, sB: number): any {
   )
 }
 
-// ── Card ──────────────────────────────────────────────────────────────────────
+// ── Shared row renderer ───────────────────────────────────────────────────────
 
-const W = 132
-
-function Card({ m, seeds, pm }: { m: any; seeds: any[]; pm: Map<string, any> }) {
+function MatchRow({ m, seeds, pm, compact }: {
+  m: any; seeds: any[]; pm: Map<string, any>; compact?: boolean
+}) {
   const empty = !m
   const done  = m?.status === 'terminado'
 
@@ -44,7 +44,8 @@ function Card({ m, seeds, pm }: { m: any; seeds: any[]; pm: Map<string, any> }) 
     const seed = seedOf(id, seeds)
     return (
       <div className={cn(
-        'flex items-start gap-1 px-1.5 py-1 text-[11px]',
+        'flex items-start gap-1 px-1.5 py-1',
+        compact ? 'text-[10px]' : 'text-[11px]',
         win  ? 'text-gold-400 font-bold' :
         lose ? 'text-felt-500' :
         empty? 'text-felt-700' : 'text-ivory-200',
@@ -68,7 +69,7 @@ function Card({ m, seeds, pm }: { m: any; seeds: any[]; pm: Map<string, any> }) 
   }
 
   const inner = (
-    <div style={{ width: W }} className={cn(
+    <div className={cn(
       'rounded border overflow-hidden',
       empty
         ? 'border-felt-800/30 opacity-20'
@@ -84,12 +85,33 @@ function Card({ m, seeds, pm }: { m: any; seeds: any[]; pm: Map<string, any> }) 
   return <Link href={`/partidos/${m.id}`}>{inner}</Link>
 }
 
-// ── Connectors ────────────────────────────────────────────────────────────────
+// ── Desktop: visual bracket card with fixed width ─────────────────────────────
 
-const CW  = 12  // connector width
-const CH  = 52  // card height (2 rows, names can wrap 1 line)
-const MG  = 4   // gap between 2 matches in a pair
-const PG  = 24  // gap between the 2 pairs on a side
+const W = 128
+
+function Card({ m, seeds, pm }: { m: any; seeds: any[]; pm: Map<string, any> }) {
+  return (
+    <div style={{ width: W }}>
+      <MatchRow m={m} seeds={seeds} pm={pm} />
+    </div>
+  )
+}
+
+function Pair({ a, b, seeds, pm }: { a: any; b: any; seeds: any[]; pm: Map<string, any> }) {
+  return (
+    <div className="flex flex-col" style={{ gap: MG }}>
+      <Card m={a} seeds={seeds} pm={pm} />
+      <Card m={b} seeds={seeds} pm={pm} />
+    </div>
+  )
+}
+
+// ── Desktop connectors ────────────────────────────────────────────────────────
+
+const CW  = 10
+const CH  = 52
+const MG  = 4
+const PG  = 20
 
 function Lines({ n, dir }: { n: number; dir: 'l' | 'r' }) {
   const pH    = CH * 2 + MG
@@ -119,26 +141,47 @@ function Lines({ n, dir }: { n: number; dir: 'l' | 'r' }) {
 
 function HLine() {
   return (
-    <svg width={18} height={2} style={{ flexShrink: 0, alignSelf: 'center' }}>
-      <line x1={0} y1={1} x2={18} y2={1} stroke="#2a4a2a" strokeWidth="1.5" />
+    <svg width={14} height={2} style={{ flexShrink: 0, alignSelf: 'center' }}>
+      <line x1={0} y1={1} x2={14} y2={1} stroke="#2a4a2a" strokeWidth="1.5" />
     </svg>
   )
 }
 
-function Pair({ a, b, seeds, pm }: { a: any; b: any; seeds: any[]; pm: Map<string, any> }) {
+// ── Mobile: round-by-round stacked layout ────────────────────────────────────
+
+const ROUND_LABELS: Record<string, string> = {
+  octavos: 'Octavos de final',
+  cuartos: 'Cuartos de final',
+  semifinal: 'Semifinales',
+  final: 'Final',
+}
+
+function MobileView({ orderedMatches, seeds, pm }: {
+  orderedMatches: { round: string; matches: any[] }[]
+  seeds: any[]
+  pm: Map<string, any>
+}) {
   return (
-    <div className="flex flex-col" style={{ gap: MG }}>
-      <Card m={a} seeds={seeds} pm={pm} />
-      <Card m={b} seeds={seeds} pm={pm} />
+    <div className="flex flex-col gap-4">
+      {orderedMatches.map(({ round, matches }) =>
+        matches.length === 0 ? null : (
+          <div key={round}>
+            <p className="text-xs text-gold-400 font-bold uppercase tracking-wider mb-2">
+              {ROUND_LABELS[round] ?? round}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {matches.map((m: any, i: number) => (
+                <MatchRow key={m?.id ?? i} m={m} seeds={seeds} pm={pm} compact />
+              ))}
+            </div>
+          </div>
+        )
+      )}
     </div>
   )
 }
 
 // ── BracketView ───────────────────────────────────────────────────────────────
-// Layout (izq → der):
-//   IZQUIERDA: seed1(TL) 5 / seed3(BL) 7   → cuartos[2,3]  → semi[1]
-//   DERECHA:   seed2(TR) 6 / seed4(BR) 8   → cuartos[0,1]  → semi[0]
-// (seed 1 y 2 se pueden ver solo en la final)
 
 export default function BracketView({ bracket, seeds, playerMap: pm }: Props) {
   const oct = bracket.octavos   ?? []
@@ -146,77 +189,85 @@ export default function BracketView({ bracket, seeds, playerMap: pm }: Props) {
   const sem = bracket.semifinal ?? []
   const fin = bracket.final     ?? []
 
-  // Octavos — lookup por par de semillas (independiente del orden en DB)
+  // Octavos ordered by seed
   const m1 = bySeeds(oct, seeds, 1, 16)
   const m5 = bySeeds(oct, seeds, 5, 12)
   const m7 = bySeeds(oct, seeds, 7, 10)
   const m3 = bySeeds(oct, seeds, 3, 14)
-
   const m2 = bySeeds(oct, seeds, 2, 15)
   const m6 = bySeeds(oct, seeds, 6, 11)
-  const m8 = bySeeds(oct, seeds, 8, 9)
+  const m8 = bySeeds(oct, seeds, 8,  9)
   const m4 = bySeeds(oct, seeds, 4, 13)
 
-  // Cuartos: [0,1] = grupo 2/4/6/8; [2,3] = grupo 1/3/5/7
-  const qL0 = qtr[2]; const qL1 = qtr[3]   // izq (seed 1 side)
-  const qR0 = qtr[0]; const qR1 = qtr[1]   // der (seed 2 side)
+  const octOrdered = [m1, m5, m2, m6, m8, m4, m7, m3].filter(Boolean)
+
+  // Cuartos: [0,1] = 2/4/6/8 side; [2,3] = 1/3/5/7 side
+  const qL0 = qtr[2]; const qL1 = qtr[3]
+  const qR0 = qtr[0]; const qR1 = qtr[1]
 
   const sL = sem[1]; const sR = sem[0]
   const f  = fin[0]
 
-  return (
-    <div className="w-full flex justify-center py-2">
-      <div className="flex items-center" style={{ gap: 0 }}>
+  const mobileRounds = [
+    { round: 'octavos',   matches: octOrdered.length ? octOrdered : oct },
+    { round: 'cuartos',   matches: qtr },
+    { round: 'semifinal', matches: sem },
+    { round: 'final',     matches: fin },
+  ]
 
-        {/* ── IZQ OCTAVOS (seed 1 TL, seed 3 BL) ── */}
+  return (
+    <>
+      {/* ── MÓVIL ── */}
+      <div className="block md:hidden">
+        <MobileView orderedMatches={mobileRounds} seeds={seeds} pm={pm} />
+      </div>
+
+      {/* ── DESKTOP ── */}
+      <div className="hidden md:flex items-center justify-center py-2" style={{ gap: 0 }}>
+
+        {/* IZQ OCTAVOS: seed1(TL) seed3(BL) */}
         <div className="flex flex-col" style={{ gap: PG }}>
           <Pair a={m1} b={m5} seeds={seeds} pm={pm} />
           <Pair a={m7} b={m3} seeds={seeds} pm={pm} />
         </div>
-
         <Lines n={2} dir="l" />
 
-        {/* ── IZQ CUARTOS ── */}
+        {/* IZQ CUARTOS */}
         <div className="flex flex-col" style={{ gap: PG }}>
           <Card m={qL0} seeds={seeds} pm={pm} />
           <Card m={qL1} seeds={seeds} pm={pm} />
         </div>
-
         <Lines n={1} dir="l" />
 
-        {/* ── IZQ SEMI ── */}
+        {/* IZQ SEMI */}
         <Card m={sL} seeds={seeds} pm={pm} />
-
         <HLine />
 
-        {/* ── FINAL ── */}
+        {/* FINAL */}
         <div className="flex flex-col items-center gap-1">
           <span className="text-xl leading-none">🏆</span>
           <Card m={f} seeds={seeds} pm={pm} />
         </div>
-
         <HLine />
 
-        {/* ── DER SEMI ── */}
+        {/* DER SEMI */}
         <Card m={sR} seeds={seeds} pm={pm} />
-
         <Lines n={1} dir="r" />
 
-        {/* ── DER CUARTOS ── */}
+        {/* DER CUARTOS */}
         <div className="flex flex-col" style={{ gap: PG }}>
           <Card m={qR0} seeds={seeds} pm={pm} />
           <Card m={qR1} seeds={seeds} pm={pm} />
         </div>
-
         <Lines n={2} dir="r" />
 
-        {/* ── DER OCTAVOS (seed 2 TR, seed 4 BR) ── */}
+        {/* DER OCTAVOS: seed2(TR) seed4(BR) */}
         <div className="flex flex-col" style={{ gap: PG }}>
           <Pair a={m2} b={m6} seeds={seeds} pm={pm} />
           <Pair a={m8} b={m4} seeds={seeds} pm={pm} />
         </div>
 
       </div>
-    </div>
+    </>
   )
 }
