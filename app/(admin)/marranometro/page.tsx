@@ -3,7 +3,7 @@ export const fetchCache = 'force-no-store'
 export const revalidate = 0
 
 import { unstable_noStore as noStore } from 'next/cache'
-import { getActiveTournament, getPlayers, getHistoricalStats, getQualifiedPlayers, getKnockoutSeeds } from '@/lib/db/queries'
+import { getActiveTournament, getPlayers, getHistoricalStats, getQualifiedPlayers, getEliminatedPlayers, getKnockoutSeeds } from '@/lib/db/queries'
 import { rankPlayers, assignSeeds } from '@/lib/business/ranking'
 import MarranometroTable, { type MarranometroRow } from '@/components/marranometro/MarranometroTable'
 
@@ -12,15 +12,17 @@ export default async function MarranometroPage() {
   const tournament = await getActiveTournament()
   if (!tournament) return <div className="text-felt-400">No hay torneo activo.</div>
 
-  const [players, stats, qualifications, seeds] = await Promise.all([
+  const [players, stats, qualifications, eliminated, seeds] = await Promise.all([
     getPlayers(tournament.id),
     getHistoricalStats(tournament.id),
     getQualifiedPlayers(tournament.id),
+    getEliminatedPlayers(tournament.id),
     getKnockoutSeeds(tournament.id),
   ])
 
   const statsMap = new Map((stats as any[]).map((s: any) => [s.player_id, s]))
   const qualifiedIds = (qualifications as any[]).map((q: any) => q.player_id)
+  const eliminatedIds = new Set((eliminated as any[]).map((e: any) => e.player_id))
   const seedMap = new Map((seeds as any[]).map((s: any) => [s.player_id, s.seed_number]))
 
   let ranked = rankPlayers(players as any, statsMap as any)
@@ -40,6 +42,7 @@ export default async function MarranometroPage() {
     sets_won: r.stats.sets_won,
     sets_lost: r.stats.sets_lost,
     seed_position: r.seed_position ?? (seedMap.has(r.player.id) ? seedMap.get(r.player.id)! : null),
+    is_eliminated: eliminatedIds.has(r.player.id),
   }))
 
   return (

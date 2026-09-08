@@ -17,6 +17,7 @@ export interface MarranometroRow {
   sets_won: number
   sets_lost: number
   seed_position: number | null
+  is_eliminated?: boolean
 }
 
 type SortKey = keyof Omit<MarranometroRow, 'player_id' | 'full_name' | 'short_name'>
@@ -95,11 +96,12 @@ export default function MarranometroTable({ rows }: { rows: MarranometroRow[] })
         </thead>
         <tbody>
           {sorted.map((r, i) => (
-            <tr key={r.player_id}>
+            <tr key={r.player_id} className={r.is_eliminated ? 'opacity-40' : ''}>
               <td className="text-center font-bold text-ivory-300">{i + 1}</td>
               <td>
-                <div className="text-sm text-ivory-200 font-medium">
+                <div className={cn('text-sm font-medium', r.is_eliminated ? 'line-through text-felt-400' : 'text-ivory-200')}>
                   {r.short_name ?? r.full_name}
+                  {r.is_eliminated && <span className="ml-1 no-underline text-xs">🐷</span>}
                 </div>
                 <div className="text-xs text-felt-400">H: {r.handicap}</div>
               </td>
@@ -107,16 +109,18 @@ export default function MarranometroTable({ rows }: { rows: MarranometroRow[] })
                 <td key={col.key}
                     className={cn(
                       'text-center',
-                      sortKey === col.key ? 'text-gold-300 font-semibold' : 'text-ivory-300'
+                      r.is_eliminated ? 'text-felt-600' : sortKey === col.key ? 'text-gold-300 font-semibold' : 'text-ivory-300'
                     )}
                 >
                   {fmt(col.key, r[col.key] as number)}
                 </td>
               ))}
               <td className="text-right">
-                {r.seed_position !== null
-                  ? <span className="badge-gold">#{r.seed_position}</span>
-                  : '—'}
+                {r.is_eliminated
+                  ? <span className="text-felt-600 text-xs">Eliminado</span>
+                  : r.seed_position !== null
+                    ? <span className="badge-gold">#{r.seed_position}</span>
+                    : '—'}
               </td>
             </tr>
           ))}

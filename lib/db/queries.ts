@@ -504,6 +504,29 @@ export async function getQualifiedPlayers(tournamentId: string) {
   `
 }
 
+/** Solo los clasificados de la última fase finalizada (para siembra de eliminatorias) */
+export async function getLastPhaseQualifiedPlayers(tournamentId: string) {
+  return sql`
+    SELECT pq.player_id
+    FROM phase_qualifications pq
+    JOIN phases ph ON ph.id = pq.phase_id
+    WHERE pq.tournament_id = ${tournamentId}
+      AND pq.status = 'clasificado'
+      AND ph.status = 'finalizada'
+      AND ph.phase_number = (
+        SELECT MAX(phase_number) FROM phases
+        WHERE tournament_id = ${tournamentId} AND status = 'finalizada'
+      )
+  `
+}
+
+export async function getEliminatedPlayers(tournamentId: string) {
+  return sql`
+    SELECT DISTINCT player_id FROM phase_qualifications
+    WHERE tournament_id = ${tournamentId} AND status = 'eliminado'
+  `
+}
+
 export async function getPhaseQualifications(phaseId: string) {
   return sql`
     SELECT pq.*, p.full_name, p.short_name

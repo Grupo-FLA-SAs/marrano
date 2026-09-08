@@ -5,7 +5,7 @@ import {
   getActiveTournament, getKnockoutSeeds, getKnockoutMatches,
   deleteKnockoutSeeds, insertKnockoutSeed,
   deleteKnockoutMatches, insertKnockoutMatch,
-  getHistoricalStats, getPlayers, getQualifiedPlayers,
+  getHistoricalStats, getPlayers, getLastPhaseQualifiedPlayers,
 } from '@/lib/db/queries'
 import { rankPlayers, assignSeeds } from '@/lib/business/ranking'
 import { generateOctavosCruces, getRoundWinners, generateNextRoundPairs } from '@/lib/business/knockout'
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const [players, statsRows, qualifiedRows] = await Promise.all([
       getPlayers(tournament.id),
       getHistoricalStats(tournament.id),
-      getQualifiedPlayers(tournament.id),
+      getLastPhaseQualifiedPlayers(tournament.id),
     ])
 
     const statsMap = new Map(statsRows.map((s: any) => [s.player_id, s]))
