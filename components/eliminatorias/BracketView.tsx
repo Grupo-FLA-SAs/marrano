@@ -32,6 +32,11 @@ function bySeeds(oct: any[], seeds: any[], sA: number, sB: number): any {
 
 // ── Shared row renderer ───────────────────────────────────────────────────────
 
+function handicapOf(id: string | null, pm: Map<string, any>): number | null {
+  if (!id) return null
+  return pm.get(id)?.handicap ?? null
+}
+
 function MatchRow({ m, seeds, pm, compact }: {
   m: any; seeds: any[]; pm: Map<string, any>; compact?: boolean
 }) {
@@ -42,6 +47,7 @@ function MatchRow({ m, seeds, pm, compact }: {
     const win  = !!(m?.winner_id && m.winner_id === id)
     const lose = !!(m?.winner_id && m.winner_id !== id && id)
     const seed = seedOf(id, seeds)
+    const hcap = handicapOf(id, pm)
     return (
       <div className={cn(
         'flex items-start gap-1 px-1.5 py-1',
@@ -60,7 +66,13 @@ function MatchRow({ m, seeds, pm, compact }: {
         <span className={cn('flex-1 leading-tight break-words', lose && 'line-through')}>
           {empty ? '—' : pName(id, pm)}
         </span>
-        {lose && <span className="shrink-0 text-[10px]">🐷</span>}
+        {hcap != null && (
+          <span className={cn(
+            'shrink-0 text-[9px] font-mono ml-0.5',
+            win ? 'text-gold-400' : lose ? 'text-felt-600' : 'text-felt-400'
+          )}>H{hcap}</span>
+        )}
+        {lose && <span className="shrink-0 text-[10px] ml-0.5">🐷</span>}
         {score != null && done && (
           <span className="shrink-0 font-mono font-bold ml-0.5">{score}</span>
         )}
@@ -162,16 +174,16 @@ function MobileView({ orderedMatches, seeds, pm }: {
   pm: Map<string, any>
 }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {orderedMatches.map(({ round, matches }) =>
         matches.length === 0 ? null : (
           <div key={round}>
-            <p className="text-xs text-gold-400 font-bold uppercase tracking-wider mb-2">
+            <p className="text-xs text-gold-400 font-bold uppercase tracking-wider mb-2 px-1">
               {ROUND_LABELS[round] ?? round}
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               {matches.map((m: any, i: number) => (
-                <MatchRow key={m?.id ?? i} m={m} seeds={seeds} pm={pm} compact />
+                <MatchRow key={m?.id ?? i} m={m} seeds={seeds} pm={pm} />
               ))}
             </div>
           </div>
