@@ -22,21 +22,34 @@ export function generateOctavosCruces(
   seeds: KnockoutSeed[]
 ): Array<{ player_a_id: string; player_b_id: string; seed_a: number; seed_b: number }> {
   const sorted = [...seeds].sort((a, b) => a.seed_number - b.seed_number)
-  const cruces = []
+  const s = (n: number) => sorted[n - 1] // 1-indexed helper
 
-  for (let i = 0; i < 8; i++) {
-    const a = sorted[i]
-    const b = sorted[15 - i]
-    if (!a || !b) continue
-    cruces.push({
-      player_a_id: a.player_id,
-      player_b_id: b.player_id,
-      seed_a: a.seed_number,
-      seed_b: b.seed_number,
-    })
-  }
+  // Orden del cuadro: 1 y 2 quedan en lados opuestos → solo se pueden ver en la final
+  // Lado izquierdo (índices 0-3): cuartos pares en 0-1
+  //   0: 1v16 → cuartos[0]
+  //   1: 8v9  → cuartos[0]
+  //   2: 4v13 → cuartos[1]
+  //   3: 5v12 → cuartos[1]
+  // Lado derecho (índices 4-7): cuartos pares en 2-3
+  //   4: 2v15 → cuartos[2]
+  //   5: 7v10 → cuartos[2]
+  //   6: 3v14 → cuartos[3]
+  //   7: 6v11 → cuartos[3]
+  const order: [number, number][] = [
+    [1, 16], [8, 9],
+    [4, 13], [5, 12],
+    [2, 15], [7, 10],
+    [3, 14], [6, 11],
+  ]
 
-  return cruces
+  return order
+    .filter(([a, b]) => s(a) && s(b))
+    .map(([a, b]) => ({
+      player_a_id: s(a).player_id,
+      player_b_id: s(b).player_id,
+      seed_a: a,
+      seed_b: b,
+    }))
 }
 
 /**

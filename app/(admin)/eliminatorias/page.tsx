@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { organizeBracket, isRoundComplete, KNOCKOUT_ROUNDS } from '@/lib/business/knockout'
-import { knockoutRoundLabel } from '@/lib/utils/format'
-import Link from 'next/link'
+import { organizeBracket, isRoundComplete } from '@/lib/business/knockout'
+import BracketView from '@/components/eliminatorias/BracketView'
 
 export default function EliminatoriasPage() {
   const [data, setData] = useState<any>(null)
@@ -52,7 +51,32 @@ export default function EliminatoriasPage() {
   const bracket = organizeBracket(matches)
   const hasSiembra = seeds.length === 16
   const playerMap = new Map(players.map((p: any) => [p.id, p]))
-  const roundOrder: (typeof KNOCKOUT_ROUNDS[number])[] = ['octavos', 'cuartos', 'semifinal', 'final', 'tercer_puesto']
+
+  // Detectar qué ronda está completa y cuál es la siguiente pendiente
+  const nextRoundMap: Record<string, string> = {
+    octavos: 'cuartos', cuartos: 'semifinal', semifinal: 'final',
+  }
+  let pendingNext: { currentRound: string; nextRound: string } | null = null
+  for (const [current, next] of Object.entries(nextRoundMap)) {
+    const currentMatches = bracket[current as keyof typeof bracket] ?? []
+    const nextMatches = bracket[next as keyof typeof bracket] ?? []
+    if (currentMatches.length > 0 && isRoundComplete(currentMatches) && nextMatches.length === 0) {
+      pendingNext = { currentRound: current, nextRound: next }
+      break
+    }
+  }
+
+  // Campeón
+  const finalMatch = bracket['final']?.[0]
+  const isChampion = finalMatch?.status === 'terminado' && finalMatch.winner_id
+  const champion = isChampion ? playerMap.get(finalMatch.winner_id!) : null
+
+  const roundLabel: Record<string, string> = {
+    octavos: 'Octavos de final',
+    cuartos: 'Cuartos de final',
+    semifinal: 'Semifinales',
+    final: 'Final',
+  }
 
   return (
     <div className="space-y-6 fade-in">
@@ -61,6 +85,7 @@ export default function EliminatoriasPage() {
         <p className="text-felt-300 text-sm">Cuadro de eliminación directa</p>
       </div>
 
+      {/* Acción: generar siembra */}
       {!hasSiembra && (
         <div className="card">
           <h2 className="font-semibold text-ivory-200 mb-2">Siembra y octavos de final</h2>
@@ -75,77 +100,37 @@ export default function EliminatoriasPage() {
         </div>
       )}
 
-      {roundOrder.map(round => {
-        const roundMatches = bracket[round] ?? []
-        if (roundMatches.length === 0) return null
+      {/* Acción: avanzar ronda */}
+      {pendingNext && (
+        <div className="card flex items-center justify-between gap-4">
+          <p className="text-ivory-200 text-sm">
+            {roundLabel[pendingNext.currentRound]} completados — ¿generar {roundLabel[pendingNext.nextRound]}?
+          </p>
+          <button
+            onClick={() => generarSiguienteRonda(pendingNext!.currentRound, pendingNext!.nextRound)}
+            disabled={generating}
+            className="btn-primary btn-sm shrink-0"
+          >
+            {generating ? '…' : `Generar ${roundLabel[pendingNext.nextRound]} →`}
+          </button>
+        </div>
+      )}
 
-        const nextRoundMap: Record<string, string> = {
-          octavos: 'cuartos', cuartos: 'semifinal', semifinal: 'final',
-        }
-        const nextRound = nextRoundMap[round]
-        const thisComplete = isRoundComplete(roundMatches)
-        const nextExists = nextRound && (bracket[nextRound as keyof typeof bracket]?.length ?? 0) > 0
+      {/* Cuadro visual */}
+      {hasSiembra && (
+        <div className="card p-4">
+          <BracketView bracket={bracket} seeds={seeds} playerMap={playerMap} />
+        </div>
+      )}
 
-        return (
-          <div key={round} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-gold-400 text-lg">{knockoutRoundLabel(round)}</h2>
-              {thisComplete && nextRound && !nextExists && (
-                <button onClick={() => generarSiguienteRonda(round, nextRound)}
-                  disabled={generating} className="btn-primary btn-sm">
-                  {generating ? '…' : `Generar ${knockoutRoundLabel(nextRound)} →`}
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {roundMatches.map((m: any) => {
-                const pA = playerMap.get(m.player_a_id)
-                const pB = playerMap.get(m.player_b_id)
-                const seedA = seeds.find((s: any) => s.player_id === m.player_a_id)
-                const seedB = seeds.find((s: any) => s.player_id === m.player_b_id)
-                return (
-                  <Link key={m.id} href={`/partidos/${m.id}`}
-                    className="card hover:border-gold-400 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 space-y-1">
-                        <div className={`flex items-center gap-2 ${m.winner_id === m.player_a_id ? 'text-gold-400 font-bold' : 'text-ivory-200'}`}>
-                          {seedA && <span className="badge-gray text-xs">#{seedA.seed_number}</span>}
-                          <span className="text-sm">{(pA as any)?.short_name ?? (pA as any)?.full_name ?? '?'}</span>
-                        </div>
-                        <div className={`flex items-center gap-2 ${m.winner_id === m.player_b_id ? 'text-gold-400 font-bold' : 'text-ivory-200'}`}>
-                          {seedB && <span className="badge-gray text-xs">#{seedB.seed_number}</span>}
-                          <span className="text-sm">{(pB as any)?.short_name ?? (pB as any)?.full_name ?? '?'}</span>
-                        </div>
-                      </div>
-                      <div className="text-center">
-                        {m.status === 'terminado'
-                          ? <div className="font-bold text-ivory-200 text-lg">{m.score_a}–{m.score_b}</div>
-                          : <span className="badge-gray text-xs">Pendiente</span>}
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
-
-      {(() => {
-        const finalMatch = bracket['final']?.[0]
-        if (finalMatch?.status === 'terminado' && finalMatch.winner_id) {
-          const champion = playerMap.get(finalMatch.winner_id)
-          return (
-            <div className="card text-center bg-gold-400/10 border-gold-400">
-              <div className="text-4xl mb-2">🏆</div>
-              <h2 className="text-2xl font-display font-bold text-gold-400">Maestro de las Tres Bandas</h2>
-              <p className="text-ivory-200 text-xl mt-2 font-bold">{(champion as any)?.full_name ?? '—'}</p>
-            </div>
-          )
-        }
-        return null
-      })()}
+      {/* Campeón */}
+      {champion && (
+        <div className="card text-center bg-gold-400/10 border-gold-400">
+          <div className="text-4xl mb-2">🏆</div>
+          <h2 className="text-2xl font-display font-bold text-gold-400">Maestro de las Tres Bandas</h2>
+          <p className="text-ivory-200 text-xl mt-2 font-bold">{(champion as any)?.full_name ?? '—'}</p>
+        </div>
+      )}
     </div>
   )
 }
