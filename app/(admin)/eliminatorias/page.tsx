@@ -53,18 +53,17 @@ export default function EliminatoriasPage() {
   const playerMap = new Map(players.map((p: any) => [p.id, p]))
 
   // Detectar qué ronda está completa y cuál es la siguiente pendiente
-  const nextRoundMap: Record<string, string> = {
-    octavos: 'cuartos', cuartos: 'semifinal', semifinal: 'final',
-  }
-  let pendingNext: { currentRound: string; nextRound: string } | null = null
-  for (const [current, next] of Object.entries(nextRoundMap)) {
-    const currentMatches = bracket[current as keyof typeof bracket] ?? []
-    const nextMatches = bracket[next as keyof typeof bracket] ?? []
-    if (currentMatches.length > 0 && isRoundComplete(currentMatches) && nextMatches.length === 0) {
-      pendingNext = { currentRound: current, nextRound: next }
-      break
-    }
-  }
+  const progression: Array<{ currentRound: string; nextRound: string }> = [
+    { currentRound: 'octavos',   nextRound: 'cuartos'   },
+    { currentRound: 'cuartos',   nextRound: 'semifinal' },
+    { currentRound: 'semifinal', nextRound: 'final'     },
+  ]
+  const pendingNext: { currentRound: string; nextRound: string } | null =
+    progression.find(({ currentRound, nextRound }) => {
+      const curr = bracket[currentRound as keyof typeof bracket] ?? []
+      const nxt  = bracket[nextRound   as keyof typeof bracket] ?? []
+      return curr.length > 0 && isRoundComplete(curr) && nxt.length === 0
+    }) ?? null
 
   // Campeón
   const finalMatch = bracket['final']?.[0]
