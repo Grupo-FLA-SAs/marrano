@@ -35,15 +35,18 @@ export default function EliminatoriasPage() {
 
   async function generarSiguienteRonda(currentRound: string, nextRound: string) {
     setGenerating(true)
-    // octavos→cuartos: generación progresiva por pares
-    const action = (currentRound === 'octavos' && nextRound === 'cuartos')
-      ? 'advance_pairs'
-      : 'next_round'
-    await fetch('/api/knockout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, currentRound, nextRound }),
-    })
+    setMsg(null)
+    try {
+      const res = await fetch('/api/knockout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'advance_pairs', currentRound, nextRound }),
+      })
+      const json = await res.json()
+      if (!res.ok) setMsg(json.error ?? 'Error al generar')
+    } catch (e) {
+      setMsg('Error de red al generar')
+    }
     await load()
     setGenerating(false)
   }
@@ -56,36 +59,38 @@ export default function EliminatoriasPage() {
   const hasSiembra = seeds.length === 16
   const playerMap = new Map<string, any>(players.map((p: any) => [p.id, p]))
 
-  // Detectar qué ronda está completa y cuál es la siguiente pendiente
   const octavosM   = bracket.octavos   ?? []
   const cuartosM   = bracket.cuartos   ?? []
   const semifinalM = bracket.semifinal ?? []
   const finalM     = bracket.final     ?? []
 
+  // Detecta si hay partidos pendientes de generar para cualquier ronda
+  function countAvailablePairs(current: any[], next: any[]): number {
+    const sorted = [...current].sort((a, b) => a.created_at.localeCompare(b.created_at))
+    const pairs = Math.floor(sorted.length / 2)
+    let available = 0
+    for (let i = 0; i < pairs; i++) {
+      const mA = sorted[i * 2]
+      const mB = sorted[i * 2 + 1]
+      if (!mA?.winner_id || !mB?.winner_id) continue
+      const exists = next.some((nm: any) =>
+        (nm.player_a_id === mA.winner_id && nm.player_b_id === mB.winner_id) ||
+        (nm.player_a_id === mB.winner_id && nm.player_b_id === mA.winner_id)
+      )
+      if (!exists) available++
+    }
+    return available
+  }
+
   let pendingCurrentRound = ''
   let pendingNextRound    = ''
 
-  // Octavos → cuartos: generar en cuanto haya al menos 1 par de octavos completo sin cuarto creado
-  if (octavosM.length > 0) {
-    const octSorted = [...octavosM].sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
-    const pairCount = Math.floor(octSorted.length / 2)
-    let completePairs = 0
-    for (let i = 0; i < pairCount; i++) {
-      const mA = octSorted[i * 2] as any
-      const mB = octSorted[i * 2 + 1] as any
-      if (mA?.winner_id && mB?.winner_id) completePairs++
-    }
-    if (completePairs > cuartosM.length) {
-      pendingCurrentRound = 'octavos'; pendingNextRound = 'cuartos'
-    }
-  }
-
-  if (!pendingCurrentRound) {
-    if (cuartosM.length > 0 && isRoundComplete(cuartosM) && semifinalM.length === 0) {
-      pendingCurrentRound = 'cuartos'; pendingNextRound = 'semifinal'
-    } else if (semifinalM.length > 0 && isRoundComplete(semifinalM) && finalM.length === 0) {
-      pendingCurrentRound = 'semifinal'; pendingNextRound = 'final'
-    }
+  if (octavosM.length > 0 && countAvailablePairs(octavosM, cuartosM) > 0) {
+    pendingCurrentRound = 'octavos'; pendingNextRound = 'cuartos'
+  } else if (cuartosM.length > 0 && countAvailablePairs(cuartosM, semifinalM) > 0) {
+    pendingCurrentRound = 'cuartos'; pendingNextRound = 'semifinal'
+  } else if (semifinalM.length > 0 && countAvailablePairs(semifinalM, finalM) > 0) {
+    pendingCurrentRound = 'semifinal'; pendingNextRound = 'final'
   }
 
   const hasPendingNext = pendingCurrentRound !== ''
@@ -128,9 +133,7 @@ export default function EliminatoriasPage() {
       {hasPendingNext ? (
         <div className="card flex items-center justify-between gap-4">
           <p className="text-ivory-200 text-sm">
-            {pendingCurrentRound === 'octavos'
-              ? 'Hay cruces de octavos listos — generar partidos de cuartos disponibles'
-              : `${roundLabel[pendingCurrentRound] ?? pendingCurrentRound} completados — ¿generar ${roundLabel[pendingNextRound] ?? pendingNextRound}?`}
+            Hay cruces de {roundLabel[pendingCurrentRound] ?? pendingCurrentRound} listos — generar {roundLabel[pendingNextRound] ?? pendingNextRound} disponibles
           </p>
           <button
             onClick={() => generarSiguienteRonda(pendingCurrentRound, pendingNextRound)}

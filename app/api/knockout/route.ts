@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
-  // Genera cuartos progresivamente: por cada par de octavos completo, crea el cuarto si no existe
+  // Genera la siguiente ronda progresivamente: por cada par completo, crea el partido si no existe
   if (body.action === 'advance_pairs') {
     const { currentRound, nextRound } = body
     const allMatches = await getKnockoutMatches(tournament.id)
@@ -85,11 +85,20 @@ export async function POST(req: Request) {
     for (let i = 0; i < pairCount; i++) {
       const mA = currentMatches[i * 2]
       const mB = currentMatches[i * 2 + 1]
-      if (!mA?.winner_id || !mB?.winner_id) continue   // par incompleto
-      if (nextMatches.length > i) continue              // cuarto ya existe para este par
+      if (!mA?.winner_id || !mB?.winner_id) continue  // par incompleto
+
+      // Verificar si ya existe un partido entre estos dos ganadores
+      const winA = mA.winner_id as string
+      const winB = mB.winner_id as string
+      const exists = nextMatches.some((nm: any) =>
+        (nm.player_a_id === winA && nm.player_b_id === winB) ||
+        (nm.player_a_id === winB && nm.player_b_id === winA)
+      )
+      if (exists) continue
+
       await insertKnockoutMatch({
-        player_a_id: mA.winner_id,
-        player_b_id: mB.winner_id,
+        player_a_id: winA,
+        player_b_id: winB,
         tournament_id: tournament.id,
         knockout_round: nextRound,
       })
