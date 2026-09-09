@@ -76,9 +76,9 @@ export async function POST(req: Request) {
   if (body.action === 'advance_pairs') {
     const { currentRound, nextRound } = body
     const allMatches = await getKnockoutMatches(tournament.id)
-    const currentMatches = [...allMatches.filter((m: any) => m.knockout_round === currentRound)]
-      .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
-    const nextMatches = allMatches.filter((m: any) => m.knockout_round === nextRound)
+    const currentMatches = (allMatches as any[]).filter(m => m.knockout_round === currentRound)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    const nextMatches = (allMatches as any[]).filter(m => m.knockout_round === nextRound)
 
     let created = 0
     const pairCount = Math.floor(currentMatches.length / 2)
