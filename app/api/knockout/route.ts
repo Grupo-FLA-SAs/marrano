@@ -72,6 +72,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // Genera cuartos progresivamente: por cada par de octavos completo, crea el cuarto si no existe
+  if (body.action === 'advance_pairs') {
+    const { currentRound, nextRound } = body
+    const allMatches = await getKnockoutMatches(tournament.id)
+    const currentMatches = [...allMatches.filter((m: any) => m.knockout_round === currentRound)]
+      .sort((a: any, b: any) => a.created_at.localeCompare(b.created_at))
+    const nextMatches = allMatches.filter((m: any) => m.knockout_round === nextRound)
+
+    let created = 0
+    const pairCount = Math.floor(currentMatches.length / 2)
+    for (let i = 0; i < pairCount; i++) {
+      const mA = currentMatches[i * 2]
+      const mB = currentMatches[i * 2 + 1]
+      if (!mA?.winner_id || !mB?.winner_id) continue   // par incompleto
+      if (nextMatches.length > i) continue              // cuarto ya existe para este par
+      await insertKnockoutMatch({
+        player_a_id: mA.winner_id,
+        player_b_id: mB.winner_id,
+        tournament_id: tournament.id,
+        knockout_round: nextRound,
+      })
+      created++
+    }
+
+    return NextResponse.json({ ok: true, created })
+  }
+
   if (body.action === 'next_round') {
     const { currentRound, nextRound } = body
     const matches = await getKnockoutMatches(tournament.id)
