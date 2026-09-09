@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { organizeBracket, isRoundComplete } from '@/lib/business/knockout'
+import { organizeBracket } from '@/lib/business/knockout'
 import BracketView from '@/components/eliminatorias/BracketView'
 
 export default function EliminatoriasPage() {
@@ -33,18 +33,44 @@ export default function EliminatoriasPage() {
     setGenerating(false)
   }
 
-  async function generarSiguienteRonda(currentRound: string, nextRound: string) {
+  // Calcula los pares disponibles desde los datos que ya tiene el frontend
+  function getAvailablePairs(
+    current: any[],
+    next: any[],
+    nextRound: string
+  ): Array<{ player_a_id: string; player_b_id: string; knockout_round: string }> {
+    const sorted = [...current].sort((a, b) =>
+      String(a.created_at).localeCompare(String(b.created_at))
+    )
+    const result: Array<{ player_a_id: string; player_b_id: string; knockout_round: string }> = []
+    const pairs = Math.floor(sorted.length / 2)
+    for (let i = 0; i < pairs; i++) {
+      const mA = sorted[i * 2]
+      const mB = sorted[i * 2 + 1]
+      if (!mA?.winner_id || !mB?.winner_id) continue
+      const winA = mA.winner_id as string
+      const winB = mB.winner_id as string
+      const exists = next.some((nm: any) =>
+        (nm.player_a_id === winA && nm.player_b_id === winB) ||
+        (nm.player_a_id === winB && nm.player_b_id === winA)
+      )
+      if (!exists) result.push({ player_a_id: winA, player_b_id: winB, knockout_round: nextRound })
+    }
+    return result
+  }
+
+  async function generarSiguienteRonda(pairs: Array<{ player_a_id: string; player_b_id: string; knockout_round: string }>) {
     setGenerating(true)
     setMsg(null)
     try {
       const res = await fetch('/api/knockout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'advance_pairs', currentRound, nextRound }),
+        body: JSON.stringify({ action: 'create_matches', pairs }),
       })
       const json = await res.json()
       if (!res.ok) setMsg(json.error ?? 'Error al generar')
-    } catch (e) {
+    } catch {
       setMsg('Error de red al generar')
     }
     await load()
@@ -59,46 +85,29 @@ export default function EliminatoriasPage() {
   const hasSiembra = seeds.length === 16
   const playerMap = new Map<string, any>(players.map((p: any) => [p.id, p]))
 
-  const octavosM   = bracket.octavos   ?? []
-  const cuartosM   = bracket.cuartos   ?? []
-  const semifinalM = bracket.semifinal ?? []
-  const finalM     = bracket.final     ?? []
+  const octavosM   = (bracket.octavos   ?? []) as any[]
+  const cuartosM   = (bracket.cuartos   ?? []) as any[]
+  const semifinalM = (bracket.semifinal ?? []) as any[]
+  const finalM     = (bracket.final     ?? []) as any[]
 
-  // Detecta si hay partidos pendientes de generar para cualquier ronda
-  function countAvailablePairs(current: any[], next: any[]): number {
-    const sorted = [...current].sort((a, b) => a.created_at.localeCompare(b.created_at))
-    const pairs = Math.floor(sorted.length / 2)
-    let available = 0
-    for (let i = 0; i < pairs; i++) {
-      const mA = sorted[i * 2]
-      const mB = sorted[i * 2 + 1]
-      if (!mA?.winner_id || !mB?.winner_id) continue
-      const exists = next.some((nm: any) =>
-        (nm.player_a_id === mA.winner_id && nm.player_b_id === mB.winner_id) ||
-        (nm.player_a_id === mB.winner_id && nm.player_b_id === mA.winner_id)
-      )
-      if (!exists) available++
-    }
-    return available
-  }
+  // Calcular pares disponibles por ronda
+  const pairsOctCuartos  = getAvailablePairs(octavosM,   cuartosM,   'cuartos')
+  const pairsCuartosSemi = getAvailablePairs(cuartosM,   semifinalM, 'semifinal')
+  const pairsSemiFinal   = getAvailablePairs(semifinalM, finalM,     'final')
 
-  let pendingCurrentRound = ''
-  let pendingNextRound    = ''
+  const pendingPairs =
+    pairsOctCuartos.length  > 0 ? pairsOctCuartos  :
+    pairsCuartosSemi.length > 0 ? pairsCuartosSemi :
+    pairsSemiFinal.length   > 0 ? pairsSemiFinal   : []
 
-  if (octavosM.length > 0 && countAvailablePairs(octavosM, cuartosM) > 0) {
-    pendingCurrentRound = 'octavos'; pendingNextRound = 'cuartos'
-  } else if (cuartosM.length > 0 && countAvailablePairs(cuartosM, semifinalM) > 0) {
-    pendingCurrentRound = 'cuartos'; pendingNextRound = 'semifinal'
-  } else if (semifinalM.length > 0 && countAvailablePairs(semifinalM, finalM) > 0) {
-    pendingCurrentRound = 'semifinal'; pendingNextRound = 'final'
-  }
+  const pendingNextRound = pendingPairs[0]?.knockout_round ?? ''
 
-  const hasPendingNext = pendingCurrentRound !== ''
+  const hasPendingNext = pendingPairs.length > 0
 
   // Campeón
-  const finalMatch = bracket['final']?.[0]
-  const isChampion = finalMatch?.status === 'terminado' && finalMatch.winner_id
-  const champion = isChampion ? playerMap.get(finalMatch.winner_id!) : null
+  const finalMatch = (bracket as any)['final']?.[0]
+  const isChampion = finalMatch?.status === 'terminado' && finalMatch?.winner_id
+  const champion = isChampion ? playerMap.get(finalMatch.winner_id) : null
 
   const roundLabel: Record<string, string> = {
     octavos: 'Octavos de final',
@@ -129,14 +138,21 @@ export default function EliminatoriasPage() {
         </div>
       ) : null}
 
+      {/* Error */}
+      {msg && hasSiembra ? (
+        <div className="bg-red-900/40 border border-red-700 rounded p-2 text-red-300 text-sm">
+          {msg}
+        </div>
+      ) : null}
+
       {/* Acción: avanzar ronda */}
       {hasPendingNext ? (
         <div className="card flex items-center justify-between gap-4">
           <p className="text-ivory-200 text-sm">
-            Hay cruces de {roundLabel[pendingCurrentRound] ?? pendingCurrentRound} listos — generar {roundLabel[pendingNextRound] ?? pendingNextRound} disponibles
+            {pendingPairs.length} partido{pendingPairs.length > 1 ? 's' : ''} de {roundLabel[pendingNextRound] ?? pendingNextRound} listo{pendingPairs.length > 1 ? 's' : ''} para generar
           </p>
           <button
-            onClick={() => generarSiguienteRonda(pendingCurrentRound, pendingNextRound)}
+            onClick={() => generarSiguienteRonda(pendingPairs)}
             disabled={generating}
             className="btn-primary btn-sm shrink-0"
           >

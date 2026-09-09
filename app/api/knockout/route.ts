@@ -72,6 +72,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // Inserta partidos directamente (pares calculados en el frontend)
+  if (body.action === 'create_matches') {
+    const pairs = body.pairs as Array<{ player_a_id: string; player_b_id: string; knockout_round: string }>
+    if (!Array.isArray(pairs) || pairs.length === 0) {
+      return NextResponse.json({ error: 'No hay pares para crear' }, { status: 400 })
+    }
+    for (const p of pairs) {
+      await insertKnockoutMatch({ ...p, tournament_id: tournament.id })
+    }
+    return NextResponse.json({ ok: true, created: pairs.length })
+  }
+
   // Genera la siguiente ronda progresivamente: por cada par completo, crea el partido si no existe
   if (body.action === 'advance_pairs') {
     const { currentRound, nextRound } = body
