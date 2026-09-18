@@ -241,9 +241,9 @@ export default function BracketView({ bracket, seeds, playerMap: pm }: Props) {
 
   const mobileRounds = [
     { round: 'octavos',   matches: octOrdered.length ? octOrdered : oct },
-    { round: 'cuartos',   matches: qtr },
-    { round: 'semifinal', matches: sem },
-    { round: 'final',     matches: fin },
+    { round: 'cuartos',   matches: [qL0, qL1, qR0, qR1].filter(Boolean) },
+    { round: 'semifinal', matches: [sL, sR].filter(Boolean) },
+    { round: 'final',     matches: [f].filter(Boolean) },
   ]
 
   return (
