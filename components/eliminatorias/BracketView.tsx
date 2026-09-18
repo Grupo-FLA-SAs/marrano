@@ -30,6 +30,17 @@ function bySeeds(oct: any[], seeds: any[], sA: number, sB: number): any {
   )
 }
 
+// Busca el partido en `pool` que enfrenta a los ganadores de dos partidos de octavos
+function byWinners(pool: any[], mA: any, mB: any): any {
+  const wA = mA?.winner_id
+  const wB = mB?.winner_id
+  if (!wA || !wB) return undefined
+  return pool.find((m: any) =>
+    (m.player_a_id === wA && m.player_b_id === wB) ||
+    (m.player_a_id === wB && m.player_b_id === wA)
+  )
+}
+
 // ── Shared row renderer ───────────────────────────────────────────────────────
 
 function handicapOf(id: string | null, pm: Map<string, any>): number | null {
@@ -201,7 +212,7 @@ export default function BracketView({ bracket, seeds, playerMap: pm }: Props) {
   const sem = bracket.semifinal ?? []
   const fin = bracket.final     ?? []
 
-  // Octavos ordered by seed
+  // ── Octavos por semilla ───────────────────────────────────────────────────────
   const m1 = bySeeds(oct, seeds, 1, 16)
   const m5 = bySeeds(oct, seeds, 5, 12)
   const m7 = bySeeds(oct, seeds, 7, 10)
@@ -213,12 +224,20 @@ export default function BracketView({ bracket, seeds, playerMap: pm }: Props) {
 
   const octOrdered = [m1, m5, m2, m6, m8, m4, m7, m3].filter(Boolean)
 
-  // Cuartos: [0,1] = 2/4/6/8 side; [2,3] = 1/3/5/7 side
-  const qL0 = qtr[2]; const qL1 = qtr[3]
-  const qR0 = qtr[0]; const qR1 = qtr[1]
+  // ── Cuartos por ganadores de sus octavos (robusto al orden de inserción) ────
+  // IZQ: winner(1v16) vs winner(5v12)  |  winner(7v10) vs winner(3v14)
+  // DER: winner(2v15) vs winner(6v11)  |  winner(8v9)  vs winner(4v13)
+  const qL0 = byWinners(qtr, m1, m5)
+  const qL1 = byWinners(qtr, m7, m3)
+  const qR0 = byWinners(qtr, m2, m6)
+  const qR1 = byWinners(qtr, m8, m4)
 
-  const sL = sem[1]; const sR = sem[0]
-  const f  = fin[0]
+  // ── Semifinal por ganadores de cuartos ───────────────────────────────────────
+  const sL = byWinners(sem, qL0, qL1)
+  const sR = byWinners(sem, qR0, qR1)
+
+  // ── Final por ganadores de semifinal ─────────────────────────────────────────
+  const f = byWinners(fin, sL, sR)
 
   const mobileRounds = [
     { round: 'octavos',   matches: octOrdered.length ? octOrdered : oct },
