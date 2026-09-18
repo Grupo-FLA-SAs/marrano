@@ -149,6 +149,31 @@ export default function EliminatoriasPage() {
         </div>
       ) : null}
 
+      {/* Corrección de semis cruzadas */}
+      {semifinalM.length > 0 && finalM.length === 0 ? (
+        <div className="card flex items-center justify-between gap-4 border-amber-700/50">
+          <p className="text-amber-300 text-sm">🔧 ¿Las semis quedaron cruzadas? Corrígelas aquí.</p>
+          <button
+            onClick={async () => {
+              setGenerating(true); setMsg(null)
+              try {
+                const res = await fetch('/api/knockout', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'fix_semis' }),
+                })
+                const json = await res.json()
+                if (!res.ok) setMsg(json.error ?? 'Error')
+              } catch { setMsg('Error de red') }
+              await load(); setGenerating(false)
+            }}
+            disabled={generating}
+            className="btn-primary btn-sm shrink-0 bg-amber-700 hover:bg-amber-600"
+          >
+            {generating ? '…' : 'Corregir semis →'}
+          </button>
+        </div>
+      ) : null}
+
       {/* Acción: avanzar ronda */}
       {hasPendingNext ? (
         <div className="card flex items-center justify-between gap-4">
