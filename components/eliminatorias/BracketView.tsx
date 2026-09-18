@@ -232,18 +232,18 @@ export default function BracketView({ bracket, seeds, playerMap: pm }: Props) {
   const qR0 = byWinners(qtr, m2, m6)
   const qR1 = byWinners(qtr, m8, m4)
 
-  // ── Semifinal por ganadores de cuartos ───────────────────────────────────────
-  const sL = byWinners(sem, qL0, qL1)
-  const sR = byWinners(sem, qR0, qR1)
+  // ── Semifinal: busca por ganadores, si no encuentra usa el array crudo ───────
+  const sL = byWinners(sem, qL0, qL1) ?? byWinners(sem, qL0, qR1) ?? byWinners(sem, qL1, qR0) ?? sem[0]
+  const sR = sem.find((m: any) => m !== sL) ?? sem[1]
 
-  // ── Final por ganadores de semifinal ─────────────────────────────────────────
-  const f = byWinners(fin, sL, sR)
+  // ── Final: busca por ganadores de semi, si no usa el primero disponible ──────
+  const f = byWinners(fin, sL, sR) ?? fin[0]
 
   const mobileRounds = [
     { round: 'octavos',   matches: octOrdered.length ? octOrdered : oct },
     { round: 'cuartos',   matches: [qL0, qL1, qR0, qR1].filter(Boolean) },
-    { round: 'semifinal', matches: [sL, sR].filter(Boolean) },
-    { round: 'final',     matches: [f].filter(Boolean) },
+    { round: 'semifinal', matches: sem.length ? sem : [sL, sR].filter(Boolean) },
+    { round: 'final',     matches: fin.length ? fin : [f].filter(Boolean) },
   ]
 
   return (
