@@ -72,6 +72,51 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // Borra las semis actuales y las recrea con los pares correctos del bracket
+  if (body.action === 'fix_semis') {
+    const allMatches = await getKnockoutMatches(tournament.id)
+    const seeds      = await getKnockoutSeeds(tournament.id)
+    const oct = (allMatches as any[]).filter(m => m.knockout_round === 'octavos')
+    const qtr = (allMatches as any[]).filter(m => m.knockout_round === 'cuartos')
+
+    // Identifica cada cuarto por ganadores de sus octavos (mismo algoritmo que BracketView)
+    function bySeeds(sA: number, sB: number) {
+      const pA = (seeds as any[]).find(s => s.seed_number === sA)?.player_id
+      const pB = (seeds as any[]).find(s => s.seed_number === sB)?.player_id
+      if (!pA || !pB) return undefined
+      return oct.find(m => (m.player_a_id === pA && m.player_b_id === pB) || (m.player_a_id === pB && m.player_b_id === pA))
+    }
+    function byWinners(pool: any[], mA: any, mB: any) {
+      const wA = mA?.winner_id; const wB = mB?.winner_id
+      if (!wA || !wB) return undefined
+      return pool.find(m => (m.player_a_id === wA && m.player_b_id === wB) || (m.player_a_id === wB && m.player_b_id === wA))
+    }
+
+    const m1 = bySeeds(1,16); const m5 = bySeeds(5,12)
+    const m7 = bySeeds(7,10); const m3 = bySeeds(3,14)
+    const m2 = bySeeds(2,15); const m6 = bySeeds(6,11)
+    const m8 = bySeeds(8, 9); const m4 = bySeeds(4,13)
+
+    const qL0 = byWinners(qtr, m1, m5)
+    const qL1 = byWinners(qtr, m7, m3)
+    const qR0 = byWinners(qtr, m2, m6)
+    const qR1 = byWinners(qtr, m8, m4)
+
+    // Semi correcta: IZQ winner vs IZQ winner, DER winner vs DER winner
+    const semiL = { player_a_id: qL0?.winner_id, player_b_id: qL1?.winner_id }
+    const semiR = { player_a_id: qR0?.winner_id, player_b_id: qR1?.winner_id }
+
+    if (!semiL.player_a_id || !semiL.player_b_id || !semiR.player_a_id || !semiR.player_b_id) {
+      return NextResponse.json({ error: 'Faltan ganadores de cuartos para generar semis' }, { status: 400 })
+    }
+
+    await deleteKnockoutMatches(tournament.id, 'semifinal')
+    await insertKnockoutMatch({ ...semiL, tournament_id: tournament.id, knockout_round: 'semifinal' })
+    await insertKnockoutMatch({ ...semiR, tournament_id: tournament.id, knockout_round: 'semifinal' })
+
+    return NextResponse.json({ ok: true })
+  }
+
   // Inserta partidos directamente (pares calculados en el frontend)
   if (body.action === 'create_matches') {
     const pairs = body.pairs as Array<{ player_a_id: string; player_b_id: string; knockout_round: string }>

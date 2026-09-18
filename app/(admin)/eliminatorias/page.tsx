@@ -63,10 +63,14 @@ export default function EliminatoriasPage() {
     setGenerating(true)
     setMsg(null)
     try {
+      const nextRound = pairs[0]?.knockout_round
+      // Para semifinal: usa fix_semis para garantizar cruces correctos (IZQ vs IZQ, DER vs DER)
+      const action   = nextRound === 'semifinal' ? 'fix_semis' : 'create_matches'
+      const body     = action === 'fix_semis' ? { action } : { action, pairs }
       const res = await fetch('/api/knockout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_matches', pairs }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) setMsg(json.error ?? 'Error al generar')
