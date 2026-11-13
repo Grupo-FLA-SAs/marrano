@@ -234,6 +234,40 @@ export default function EliminatoriasPage() {
           <p className="text-ivory-200 text-xl mt-2 font-bold">{(champion as any)?.full_name ?? '—'}</p>
         </div>
       ) : null}
+
+      {/* Cerrar torneo */}
+      {champion && data?.tournament?.status !== 'finalizado' ? (
+        <div className="card flex items-center justify-between gap-4 border-felt-600">
+          <p className="text-felt-300 text-sm">El torneo tiene campeón. Ciérralo para archivarlo.</p>
+          <button
+            onClick={async () => {
+              if (!confirm('¿Cerrar el torneo? Esta acción no se puede deshacer.')) return
+              setGenerating(true)
+              try {
+                const res = await fetch('/api/tournament', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'close' }),
+                })
+                const json = await res.json()
+                if (!res.ok) setMsg(json.error ?? 'Error')
+                else await load()
+              } catch { setMsg('Error de red') }
+              setGenerating(false)
+            }}
+            disabled={generating}
+            className="btn-primary btn-sm shrink-0 bg-felt-700 hover:bg-felt-600"
+          >
+            {generating ? '…' : 'Cerrar torneo'}
+          </button>
+        </div>
+      ) : null}
+
+      {data?.tournament?.status === 'finalizado' ? (
+        <div className="card text-center border-felt-700 bg-felt-900/40">
+          <p className="text-felt-400 text-sm">Torneo finalizado y archivado.</p>
+        </div>
+      ) : null}
     </div>
   )
 }
