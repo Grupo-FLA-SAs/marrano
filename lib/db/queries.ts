@@ -86,7 +86,7 @@ export async function updatePlayer(id: string, data: Record<string, any>) {
   const rows = await sql`
     UPDATE players SET
       full_name = ${data.full_name},
-      short_name = ${data.short_name ?? null},
+      short_name = ${data.short_name || null},
       handicap = ${data.handicap},
       notes = ${data.notes ?? null},
       updated_at = NOW()

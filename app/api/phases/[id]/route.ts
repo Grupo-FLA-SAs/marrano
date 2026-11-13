@@ -50,6 +50,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const phase = await getPhaseById(params.id)
     if (!phase) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
 
+    // Limpiar datos previos si existían (retry seguro)
+    await sql`DELETE FROM matches WHERE phase_id = ${params.id}`
+    await sql`DELETE FROM group_members WHERE phase_id = ${params.id}`
+    await sql`DELETE FROM groups WHERE phase_id = ${params.id}`
+
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i]
       const [group] = await sql`
