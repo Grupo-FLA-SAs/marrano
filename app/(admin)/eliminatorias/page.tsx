@@ -95,9 +95,10 @@ export default function EliminatoriasPage() {
   const finalM     = (bracket.final     ?? []) as any[]
 
   // Calcular pares disponibles por ronda
+  // Guarda: si ya existen N partidos de la siguiente ronda, no generar más
   const pairsOctCuartos  = getAvailablePairs(octavosM,   cuartosM,   'cuartos')
-  const pairsCuartosSemi = getAvailablePairs(cuartosM,   semifinalM, 'semifinal')
-  const pairsSemiFinal   = getAvailablePairs(semifinalM, finalM,     'final')
+  const pairsCuartosSemi = semifinalM.length >= 2 ? [] : getAvailablePairs(cuartosM, semifinalM, 'semifinal')
+  const pairsSemiFinal   = finalM.length >= 1   ? [] : getAvailablePairs(semifinalM, finalM,    'final')
 
   const pendingPairs =
     pairsOctCuartos.length  > 0 ? pairsOctCuartos  :
@@ -149,8 +150,8 @@ export default function EliminatoriasPage() {
         </div>
       ) : null}
 
-      {/* Corrección de semis cruzadas — solo si las semis NO tienen resultado aún */}
-      {semifinalM.length > 0 && finalM.length === 0 && semifinalM.some((m: any) => !m.winner_id) ? (
+      {/* Corrección de semis cruzadas — solo si NINGUNA semi tiene resultado todavía */}
+      {semifinalM.length > 0 && finalM.length === 0 && semifinalM.every((m: any) => !m.winner_id) ? (
         <div className="card flex items-center justify-between gap-4 border-amber-700/50">
           <p className="text-amber-300 text-sm">🔧 ¿Las semis quedaron cruzadas? Corrígelas aquí.</p>
           <button
