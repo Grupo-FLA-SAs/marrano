@@ -1,26 +1,42 @@
-export const dynamic = 'force-dynamic'
-export const fetchCache = 'force-no-store'
-export const revalidate = 0
+'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { unstable_noStore as noStore } from 'next/cache'
-import { getActiveTournament, getPhases } from '@/lib/db/queries'
+import { useRouter } from 'next/navigation'
 
 const statusColors: Record<string, string> = {
-  pendiente: 'badge-gray', activa: 'badge-green', finalizada: 'badge-gold',
+  pendiente: 'badge-gray', activa: 'badge-green', finalizada: 'badge-gold', borrador: 'badge-gray',
 }
 const statusLabels: Record<string, string> = {
-  pendiente: 'Pendiente', activa: 'Activa', finalizada: 'Finalizada',
+  pendiente: 'Pendiente', activa: 'Activa', finalizada: 'Finalizada', borrador: 'Borrador',
 }
 
-export default async function FasesPage() {
-  noStore()
-  const tournament = await getActiveTournament()
-  if (!tournament) {
-    return <div className="text-center py-12"><p className="text-felt-400">Primero crea un torneo.</p></div>
+export default function FasesPage() {
+  const [phases, setPhases] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const router = useRouter()
+
+  async function load() {
+    const res = await fetch('/api/phases')
+    const json = await res.json()
+    setPhases(json.data ?? [])
+    setLoading(false)
   }
 
-  const phases = await getPhases(tournament.id)
+  useEffect(() => { load() }, [])
+
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm('¿Eliminar esta fase en borrador?')) return
+    setDeleting(id)
+    await fetch(`/api/phases/${id}`, { method: 'DELETE' })
+    await load()
+    setDeleting(null)
+  }
+
+  if (loading) return <div className="text-felt-400 text-sm p-4">Cargando…</div>
 
   return (
     <div className="space-y-5 fade-in">
@@ -52,7 +68,18 @@ export default async function FasesPage() {
             <span className={statusColors[phase.status] ?? 'badge-gray'}>
               {statusLabels[phase.status] ?? phase.status}
             </span>
-            <span className="text-gold-400">›</span>
+            {phase.status === 'borrador' ? (
+              <button
+                onClick={(e) => handleDelete(phase.id, e)}
+                disabled={deleting === phase.id}
+                className="text-red-400 hover:text-red-300 text-lg leading-none px-1 shrink-0"
+                title="Eliminar fase"
+              >
+                {deleting === phase.id ? '…' : '🗑'}
+              </button>
+            ) : (
+              <span className="text-gold-400">›</span>
+            )}
           </Link>
         ))}
       </div>

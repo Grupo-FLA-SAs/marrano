@@ -105,3 +105,21 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   return NextResponse.json({ error: 'Acción desconocida' }, { status: 400 })
 }
+
+export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const phase = await getPhaseById(params.id)
+  if (!phase) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
+  if (phase.status !== 'borrador') {
+    return NextResponse.json({ error: 'Solo se pueden eliminar fases en borrador' }, { status: 400 })
+  }
+
+  await sql`DELETE FROM matches WHERE phase_id = ${params.id}`
+  await sql`DELETE FROM group_members WHERE phase_id = ${params.id}`
+  await sql`DELETE FROM groups WHERE phase_id = ${params.id}`
+  await sql`DELETE FROM phases WHERE id = ${params.id}`
+
+  return NextResponse.json({ ok: true })
+}
