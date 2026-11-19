@@ -207,7 +207,7 @@ export default function CierreFasePage() {
                   <div key={s.player_id} className={`flex items-center gap-3 rounded-lg px-2 py-1 ${s.needs_manual_resolution ? 'bg-amber-900/20' : ''}`}>
                     <span className="w-5 text-center font-bold text-ivory-300 text-sm">{s.position}</span>
                     <span className="flex-1 text-sm text-ivory-200">
-                      {s.player?.short_name ?? s.player?.full_name}
+                      {s.player?.full_name}
                       <span className="text-felt-400 text-xs ml-2">({s.points} pts)</span>
                     </span>
                     <div className="flex gap-1">
@@ -279,7 +279,7 @@ export default function CierreFasePage() {
                                 {orderNum}
                               </span>
                             )}
-                            {p.player?.short_name ?? p.player?.full_name}
+                            {p.player?.full_name}
                           </button>
                         )
                       })}
@@ -294,7 +294,7 @@ export default function CierreFasePage() {
                         const classifies = pos !== undefined && pos <= qualifiesUpTo
                         return (
                           <div key={p.player_id} className="flex items-center justify-between text-sm">
-                            <span className="text-ivory-200">{pos}. {p.player?.short_name ?? p.player?.full_name}</span>
+                            <span className="text-ivory-200">{pos}. {p.player?.full_name}</span>
                             {classifies
                               ? <span className="badge-green text-xs">✓ Clasifica</span>
                               : pos === ranked.length

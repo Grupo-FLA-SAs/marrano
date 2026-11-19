@@ -215,7 +215,7 @@ export default function SorteoPage() {
                       : 'bg-felt-700 border-felt-600 text-ivory-200 hover:border-gold-400'
                   }`}
                 >
-                  {p.short_name ?? p.full_name}
+                  {p.full_name}
                   <span className="text-xs ml-1 opacity-70">H:{p.handicap}</span>
                 </button>
               ))}
@@ -254,7 +254,7 @@ export default function SorteoPage() {
                   <div key={pid} className="flex items-center justify-between">
                     <div className="text-sm">
                       {isSeed && <span className="text-gold-400 mr-1" title="Cabeza de grupo">👑</span>}
-                      <span className="text-ivory-200">{p.short_name ?? p.full_name}</span>
+                      <span className="text-ivory-200">{p.full_name}</span>
                       <span className="text-gold-400 ml-2 text-xs">H:{p.handicap}</span>
                     </div>
                     <div className="flex gap-1 items-center">
