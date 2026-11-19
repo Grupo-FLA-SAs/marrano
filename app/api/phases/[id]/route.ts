@@ -50,6 +50,18 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const phase = await getPhaseById(params.id)
     if (!phase) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
 
+    // Validar que todos los jugadores existan (la página puede tener datos viejos)
+    const ids: string[] = groups.flatMap((g: any) => g.players)
+    const found = await sql`SELECT id FROM players WHERE id = ANY(${ids}::uuid[])`
+    const foundSet = new Set(found.map((r: any) => r.id))
+    const missing = ids.filter(id => !foundSet.has(id))
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { error: `${missing.length} jugador(es) del sorteo ya no existen. Recarga la página y vuelve a sortear.` },
+        { status: 409 }
+      )
+    }
+
     // Limpiar datos previos si existían (retry seguro)
     await sql`DELETE FROM matches WHERE phase_id = ${params.id}`
     await sql`DELETE FROM group_members WHERE phase_id = ${params.id}`
