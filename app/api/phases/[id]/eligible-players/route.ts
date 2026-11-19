@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import { getPhaseById } from '@/lib/db/queries'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 /**
  * Devuelve los jugadores elegibles para el sorteo de esta fase.
  * Si hay clasificados de una fase anterior del mismo torneo → los usa.
@@ -27,7 +30,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   `
 
   if (qualified.length > 0) {
-    return NextResponse.json({ data: qualified, source: 'classified' })
+    return NextResponse.json({ data: qualified, source: 'classified' }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
   // Primera fase — usar todos los jugadores del torneo
@@ -37,5 +40,5 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     WHERE tournament_id = ${(phase as any).tournament_id}
     ORDER BY full_name
   `
-  return NextResponse.json({ data: all, source: 'all' })
+  return NextResponse.json({ data: all, source: 'all' }, { headers: { 'Cache-Control': 'no-store' } })
 }

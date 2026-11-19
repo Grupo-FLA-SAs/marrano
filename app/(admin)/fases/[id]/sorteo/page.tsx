@@ -22,7 +22,7 @@ export default function SorteoPage() {
     async function load() {
       const [phaseRes, playersRes] = await Promise.all([
         fetch(`/api/phases/${phaseId}`).then(r => r.json()),
-        fetch(`/api/phases/${phaseId}/eligible-players`).then(r => r.json()),
+        fetch(`/api/phases/${phaseId}/eligible-players`, { cache: 'no-store' }).then(r => r.json()),
       ])
       const p = phaseRes.data?.phase
       if (!p) return

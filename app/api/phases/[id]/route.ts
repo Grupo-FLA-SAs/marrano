@@ -57,7 +57,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const missing = ids.filter(id => !foundSet.has(id))
     if (missing.length > 0) {
       return NextResponse.json(
-        { error: `${missing.length} jugador(es) del sorteo ya no existen. Recarga la página y vuelve a sortear.` },
+        { error: `${missing.length} jugador(es) del sorteo ya no existen. Recarga la página y vuelve a sortear. IDs: ${missing.slice(0, 3).join(', ')}` },
         { status: 409 }
       )
     }
